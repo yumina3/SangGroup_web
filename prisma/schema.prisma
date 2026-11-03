@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- Modul identity -----------------------------------------------------
+// Hanya tabel yang dibutuhkan autentikasi. Tabel bisnis lain (properties,
+// inquiries, dst.) dibuat modulnya masing-masing.
+
+enum UserRole {
+  buyer
+  agent
+  admin
+}
+
+enum UserStatus {
+  pending
+  active
+  inactive
+}
+
+/// Profil aplikasi. `id` sama dengan `auth.users.id` pada Supabase Auth.
+model Profile {
+  id         String     @id
+  fullName   String     @map("full_name")
+  email      String     @unique
+  phone      String
+  role       UserRole   @default(buyer)
+  status     UserStatus @default(active)
+  agencyName String?    @map("agency_name")
+  avatarPath String?    @map("avatar_path")
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  authEvents AuthEvent[]
+
+  @@map("profiles")
+}
+
+/// Jejak audit autentikasi. Tidak pernah menyimpan kata sandi atau token.
+model AuthEvent {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  action    String
+  detail    Json?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  profile Profile? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("auth_events")
+}

@@ -1,26 +1,300 @@
 @import "tailwindcss";
 
+/*
+ * Token desain SANG Group.
+ *
+ * Dua set sengaja dipisah:
+ *  - --green-900/--gold dst. = patokan PRD §5.1 (dipakai dashboard).
+ *  - --public-* = nilai final dari board desain Stitch (PRD §5.1: "ambil nilai
+ *    final dari hasil Stitch"), dipakai situs publik termasuk halaman auth.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --green-900: #0f4c3a;
+  --green-deep: #0b3a2c;
+  --green-sidebar: #14412f;
+  --gold: #c8963e;
+  --gold-soft: #e2c48b;
+  --bg-public: #f5f5f2;
+  --bg-dashboard: #f4f6f4;
+  --ink: #1f2a26;
+  --muted: #6b7a74;
+  --success: #2e9e5b;
+  --warning: #e0a21b;
+  --danger: #d64545;
+  --info: #2f6fb5;
+  --line: #e3e0d6;
+
+  /* Nilai final dari board desain situs publik (docs/design/pengguna.png). */
+  --public-green: #0f382a;
+  --public-green-deep: #0b2a1f;
+  --public-green-alt: #16423c;
+  --public-sage: #a8b5a2;
+  --public-gold: #d4a348;
+  --public-gold-soft: #e2b96a;
+  --public-cream: #f8f6f0;
+  --public-ink: #1a1a1a;
+  --public-line: #e6e2d8;
+
+  /*
+   * Nilai final dashboard, disampling dari mockup dashboard
+   * (docs/design/admin.png, agen.png, pengguna.png). PRD §5.1.
+   */
+  --dash-sidebar: #0c3c2c; /* sidebar hijau tua */
+  --dash-sidebar-hover: #144938; /* item sidebar saat hover */
+  --dash-sidebar-active: #17513d; /* item sidebar aktif */
+  --dash-bg: #f4f6f4; /* kanvas dashboard */
+  --dash-card: #ffffff;
+  --dash-border: #e6ebe7;
+  --dash-ink: #1c2838; /* teks utama dashboard */
+  --dash-ink-soft: #647488; /* teks bantu dashboard */
+  --dash-gold: #c8943c;
+  --dash-green: #0c3c2c;
+  --dash-green-soft: #10b880;
+
+  /* Radius dan jarak dashboard (PRD §5.2). */
+  --dash-radius: 8px;
+  --dash-radius-tag: 6px;
+  --dash-sidebar-w: 240px;
+  --dash-topbar-h: 64px;
+
+  /*
+   * Token landing page (spesifikasi desain yang diberikan).
+   * Sengaja dipisah dari --public-* supaya perubahan token publik tidak
+   * menggeser landing page.
+   */
+  --lp-green: #12392b;
+  --lp-green-deep: #0e2e22;
+  --lp-gold: #c8a24a;
+  --lp-cream: #faf8f2;
+  --lp-mint: #eef4ec;
+  --lp-ink: #1b2a22;
+
+  /*
+   * Token SITUS PUBLIK (role pengguna), diambil apa adanya dari blok
+   * tailwind.config di berkas code.html tiap folder docs/site — bukan
+   * perkiraan. Acuan final untuk seluruh rute di grup (site).
+   */
+  --site-dark: #08231b; /* brand.dark — teks paling gelap */
+  --site-forest: #0d3b2e; /* brand.forest — primer */
+  --site-forest-light: #144c3c; /* brand.forestLight */
+  --site-gold: #c5a869; /* brand.gold */
+  --site-gold-hover: #b39556; /* brand.goldHover */
+  --site-accent: #e6c875; /* brand.accent */
+  --site-cream: #f9f8f5; /* brand.cream */
+  --site-muted: #718096; /* brand.muted */
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-green-900: var(--green-900);
+  --color-green-deep: var(--green-deep);
+  --color-green-sidebar: var(--green-sidebar);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-public: var(--bg-public);
+  --color-dashboard: var(--bg-dashboard);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-line: var(--line);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-brand: var(--public-green);
+  --color-brand-deep: var(--public-green-deep);
+  --color-brand-alt: var(--public-green-alt);
+  --color-brand-sage: var(--public-sage);
+  --color-brand-gold: var(--public-gold);
+  --color-brand-gold-soft: var(--public-gold-soft);
+  --color-brand-cream: var(--public-cream);
+  --color-brand-ink: var(--public-ink);
+  --color-brand-line: var(--public-line);
+
+  --color-dash-sidebar: var(--dash-sidebar);
+  --color-dash-hover: var(--dash-sidebar-hover);
+  --color-dash-active: var(--dash-sidebar-active);
+  --color-dash-bg: var(--dash-bg);
+  --color-dash-card: var(--dash-card);
+  --color-dash-border: var(--dash-border);
+  --color-dash-ink: var(--dash-ink);
+  --color-dash-ink-soft: var(--dash-ink-soft);
+  --color-dash-gold: var(--dash-gold);
+  --color-dash-green: var(--dash-green);
+  --color-dash-mint: var(--dash-green-soft);
+
+  --radius-dash: var(--dash-radius);
+  --radius-tag: var(--dash-radius-tag);
+
+  --color-ag-sidebar: var(--ag-sidebar);
+  --color-ag-forest: var(--ag-forest);
+  --color-ag-forest-medium: var(--ag-forest-medium);
+  --color-ag-gold: var(--ag-gold);
+  --color-ag-gold-base: var(--ag-gold-base);
+  --color-ag-gold-muted: var(--ag-gold-muted);
+  --color-ag-gold-light: var(--ag-gold-light);
+  --color-ag-ivory: var(--ag-ivory);
+  --color-ag-ivory-surface: var(--ag-ivory-surface);
+  --color-ag-surface-low: var(--ag-surface-low);
+  --color-ag-slate: var(--ag-slate-primary);
+  --color-ag-slate-secondary: var(--ag-slate-secondary);
+  --color-ag-slate-muted: var(--ag-slate-muted);
+  --color-ag-line: var(--ag-line);
+  --color-ag-available: var(--ag-available);
+  --color-ag-booked: var(--ag-booked);
+  --color-ag-sold: var(--ag-sold);
+
+  --color-lp-green: var(--lp-green);
+  --color-lp-deep: var(--lp-green-deep);
+  --color-lp-gold: var(--lp-gold);
+  --color-lp-cream: var(--lp-cream);
+  --color-lp-mint: var(--lp-mint);
+  --color-lp-ink: var(--lp-ink);
+
+  --color-site-dark: var(--site-dark);
+  --color-site-forest: var(--site-forest);
+  --color-site-light: var(--site-forest-light);
+  --color-site-gold: var(--site-gold);
+  --color-site-goldhover: var(--site-gold-hover);
+  --color-site-accent: var(--site-accent);
+  --color-site-cream: var(--site-cream);
+  --color-site-muted: var(--site-muted);
+
+  --font-sans: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
+
+  /*
+   * Alias serif diarahkan ke Plus Jakarta Sans: seluruh aplikasi memakai satu
+   * keluarga font, sehingga kelas `font-serif` yang masih tersisa di halaman
+   * tidak memunculkan typeface lain (mis. Georgia bawaan browser).
+   */
+  --font-serif: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--public-cream);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+/* Fokus keyboard harus selalu terlihat (PRD §12). */
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/*
+ * Token dashboard agen sengaja dipasang sebagai scope `.ag-scope` (dipakai di
+ * layout `/dashboard`), bukan :root, supaya variabel hanya ada di halaman
+ * dashboard dan tidak menambah beban situs publik.
+ *
+ * Nilai disalin apa adanya dari blok tailwind config pada berkas desain agen
+ * (docs/agen): "primary-container", "gold-base", "brand-dark", "kavling-*",
+ * "slate-*".
+ */
+.ag-scope {
+  --ag-sidebar: #0d3b2e; /* primary-container */
+  --ag-forest: #0d3b2e; /* brand-dark, sekaligus warna sidebar */
+  --ag-forest-medium: #134e3f; /* brand-medium */
+  --ag-gold: #c8963e; /* aksen tombol utama pada desain agen */
+  --ag-gold-base: #d4af37; /* gold-base */
+  --ag-gold-muted: #c5a059; /* gold-muted */
+  --ag-gold-light: #e5c158; /* gold-light */
+  --ag-ivory: #fdfbf7; /* ivory-bg */
+  --ag-ivory-surface: #f8f6f0; /* ivory-surface */
+  --ag-surface-low: #f0f3ff; /* surface-container-low */
+  --ag-slate-primary: #1e293b;
+  --ag-slate-secondary: #64748b;
+  --ag-slate-muted: #94a3b8;
+  --ag-line: #e2e8f0; /* setara slate-200 */
+  --ag-available: #10b981; /* kavling-available */
+  --ag-booked: #f59e0b; /* kavling-reserved */
+  --ag-sold: #64748b;
+  --ag-sidebar-w: 288px; /* w-72 pada desain */
+  --ag-topbar-h: 80px; /* h-20 pada desain */
+
+  /* Pasangkan ke utility @theme di bawah, hanya di dalam scope ini. */
+  --color-ag-sidebar: var(--ag-sidebar);
+  --color-ag-forest: var(--ag-forest);
+  --color-ag-forest-medium: var(--ag-forest-medium);
+  --color-ag-gold: var(--ag-gold);
+  --color-ag-gold-base: var(--ag-gold-base);
+  --color-ag-gold-muted: var(--ag-gold-muted);
+  --color-ag-gold-light: var(--ag-gold-light);
+  --color-ag-ivory: var(--ag-ivory);
+  --color-ag-ivory-surface: var(--ag-ivory-surface);
+  --color-ag-surface-low: var(--ag-surface-low);
+  --color-ag-slate: var(--ag-slate-primary);
+  --color-ag-slate-secondary: var(--ag-slate-secondary);
+  --color-ag-slate-muted: var(--ag-slate-muted);
+  --color-ag-line: var(--ag-line);
+  --color-ag-available: var(--ag-available);
+  --color-ag-booked: var(--ag-booked);
+  --color-ag-sold: var(--ag-sold);
+}
+
+.ag-nav-indicator {
+  visibility: hidden;
+}
+
+.ag-nav-link[aria-current="page"] {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #fff !important;
+  font-weight: 700;
+}
+
+.ag-nav-link[aria-current="page"] .ag-nav-icon {
+  color: var(--ag-gold-light) !important;
+}
+
+.ag-nav-link[aria-current="page"] .ag-nav-indicator {
+  visibility: visible;
+}
+
+/*
+ * Tab preferensi dashboard (Profil/Keamanan/Notifikasi).
+ */
+.ag-tab[aria-current="page"] span:last-child {
+  background-color: var(--ag-gold-base);
+  opacity: 1;
+}
+
+/*
+ * Scrollbar tipis untuk area menu sidebar agen: menu yang melebihi tinggi
+ * layar cukup digulir. Tidak ada efek geser/hover yang bergerak.
+ */
+.ag-sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+
+.ag-sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ag-sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 9999px;
+}
+
+/*
+ * Peta Leaflet: CSS paket diimpor di komponen MapPicker. Outline bawaan
+ * Leaflet dihilangkan karena fokus keyboard sudah ditangani :focus-visible.
+ */
+.leaflet-container {
+  font-family: var(--font-sans);
+  background: #eae8e1;
+}
+
+.leaflet-container:focus-visible {
+  outline: 2px solid var(--ag-gold, #c8963e);
+  outline-offset: 2px;
+}
+
+.leaflet-container a {
+  color: var(--ag-forest, #0d3b2e);
+}
+
+@media print {
+  .no-print {
+    display: none;
+  }
 }
