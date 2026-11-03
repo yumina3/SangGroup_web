@@ -1,28 +1,35 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import ActionButton from "@/components/dashboard/ActionButton";
 import Modal from "@/components/dashboard/Modal";
 import { useToast } from "@/components/dashboard/Toast";
-import { SALE_STATUS, labelOf } from "@/lib/dashboard/status-labels";
+import {
+  allowedSaleTransitions,
+  LISTING_STATUS,
+  labelOf,
+  SALE_STATUS,
+} from "@/lib/dashboard/status-labels";
 import SaleStatusMenu from "./SaleStatusMenu";
 
 /**
- * Aksi per baris properti: Ubah, Ubah status, dan menu tambahan (Hapus).
+ * Aksi per baris properti: Ubah, Ubah status, dan menu tambahan (kirim
+ * verifikasi / hapus).
  *
  * - "Ubah status" hanya menampilkan transisi yang sah (SRS §6.8).
- * - "Hapus" memakai dialog konfirmasi. Selama modul server belum tersambung,
- *   aksi hanya memberi tahu bahwa penyimpanan belum aktif — tidak menampilkan
- *   "berhasil" palsu.
+ * - "Kirim untuk verifikasi" tersedia untuk DRAFT, REJECTED, dan HIDDEN.
+ * - "Hapus" memakai dialog konfirmasi.
+ * - Penyimpanan belum aktif: setiap aksi dibuka dengan konfirmasi (bila
+ *   mengubah keadaan) lalu memberi tahu bahwa perubahan belum tercatat —
+ *   tidak pernah menampilkan "berhasil" palsu.
  */
 export default function PropertyRowActions({ property }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [submitOpen, setSubmitOpen] = useState(false);
   const containerRef = useRef(null);
   const toast = useToast();
-  const router = useRouter();
 
   useEffect(() => {
     if (!menuOpen) return undefined;
@@ -44,6 +51,8 @@ export default function PropertyRowActions({ property }) {
     };
   }, [menuOpen]);
 
+  const canSubmit = ["DRAFT", "REJECTED", "HIDDEN"].includes(property.listingStatus);
+
   return (
     <div className="flex items-center justify-end gap-1">
       <ActionButton
@@ -62,7 +71,8 @@ export default function PropertyRowActions({ property }) {
         triggerLabel="Ubah status"
         onSave={(next) =>
           toast.push(
-            `Status ketersediaan "${property.title}" akan diubah menjadi ${labelOf(SALE_STATUS, next)}.`,
+            `Status "${property.title}" akan menjadi ${labelOf(SALE_STATUS, next)} (pratinjau). ` +
+              "Ketersediaan belum tersimpan karena penyimpanan belum aktif.",
             "info",
           )
         }
@@ -84,18 +94,20 @@ export default function PropertyRowActions({ property }) {
           <div
             role="menu"
             aria-label={`Aksi lain ${property.title}`}
-            className="absolute right-0 z-20 mt-1 w-48 rounded-lg border border-ag-line bg-white p-1.5 shadow-lg"
+            className="absolute right-0 z-20 mt-1 w-52 rounded-lg border border-ag-line bg-white p-1.5 shadow-lg"
           >
             <button
               type="button"
               role="menuitem"
-              disabled={!["DRAFT", "REJECTED"].includes(property.listingStatus)}
+              disabled={!canSubmit}
+              title={
+                canSubmit
+                  ? undefined
+                  : `Listing berstatus ${labelOf(LISTING_STATUS, property.listingStatus)} tidak menunggu dikirim ulang`
+              }
               onClick={() => {
                 setMenuOpen(false);
-                toast.push(
-                  "Pengiriman ulang untuk verifikasi belum aktif karena modul database belum tersambung.",
-                  "info",
-                );
+                setSubmitOpen(true);
               }}
               className="flex w-full items-center rounded-md px-2.5 py-2 text-left text-[13px] text-ag-slate hover:bg-ag-surface-low disabled:cursor-not-allowed disabled:text-ag-slate-muted disabled:hover:bg-transparent"
             >
@@ -117,6 +129,41 @@ export default function PropertyRowActions({ property }) {
       </div>
 
       <Modal
+        open={submitOpen}
+        onClose={() => setSubmitOpen(false)}
+        title="Kirim listing untuk verifikasi?"
+        description="Admin akan memeriksa kelengkapan data, foto, dan titik koordinat."
+        footer={
+          <>
+            <ActionButton variant="outline" size="md" onClick={() => setSubmitOpen(false)}>
+              Batal
+            </ActionButton>
+            <ActionButton
+              variant="primary"
+              size="md"
+              onClick={() => {
+                setSubmitOpen(false);
+                toast.push(
+                  `"${property.title}" akan diajukan untuk verifikasi. Pengiriman belum tersimpan karena penyimpanan belum aktif.`,
+                  "info",
+                );
+              }}
+            >
+              Kirim untuk verifikasi
+            </ActionButton>
+          </>
+        }
+      >
+        <p className="text-[13px] leading-relaxed text-ag-slate-secondary">
+          Listing{" "}
+          <strong className="font-semibold text-ag-slate">{property.title}</strong> ({property.unit})
+          akan berstatus{" "}
+          <strong className="font-semibold text-ag-slate">Menunggu Verifikasi</strong> hingga admin
+          memutuskan. Selama itu data listing terkunci.
+        </p>
+      </Modal>
+
+      <Modal
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
         title="Hapus listing properti?"
@@ -132,10 +179,9 @@ export default function PropertyRowActions({ property }) {
               onClick={() => {
                 setDeleteOpen(false);
                 toast.push(
-                  `Permintaan hapus untuk "${property.title}" diterima. Penyimpanan belum aktif karena modul database belum tersambung.`,
+                  `Permintaan hapus untuk "${property.title}" diterima. Penyimpanan belum aktif, jadi listing masih tampil di daftar.`,
                   "info",
                 );
-                router.refresh();
               }}
             >
               Hapus listing
@@ -149,6 +195,15 @@ export default function PropertyRowActions({ property }) {
           {property.unit}) akan dihapus dari daftar Anda. Riwayat pengajuan terkait
           tetap tersimpan di sistem.
         </p>
+        {property.activeInquiries > 0 ? (
+          <p
+            role="status"
+            className="mt-3 rounded-tag border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-800"
+          >
+            Listing ini masih punya {property.activeInquiries} pengajuan aktif. Pertimbangkan
+            menandainya <strong className="font-semibold">Terjual</strong> alih-alih menghapus.
+          </p>
+        ) : null}
       </Modal>
     </div>
   );
@@ -156,8 +211,5 @@ export default function PropertyRowActions({ property }) {
 
 /** Transisi ketersediaan yang sah untuk baris ini (SRS §6.8). */
 export function transitionsFor(property) {
-  if (property.listingStatus !== "VERIFIED") return [];
-  if (property.saleStatus === "AVAILABLE") return ["BOOKED", "SOLD"];
-  if (property.saleStatus === "BOOKED") return ["SOLD", "AVAILABLE"];
-  return [];
+  return allowedSaleTransitions(property);
 }

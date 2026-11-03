@@ -23,10 +23,11 @@ const TABS = [
   { key: "jadwal", label: "Jadwal kunjungan" },
 ];
 
-function tabHref(tab, type) {
+function tabHref(tab, type, focusId = null) {
   const search = new URLSearchParams();
   if (tab !== "semua") search.set("tab", tab);
   if (type) search.set("type", type);
+  if (focusId) search.set("id", focusId);
   const query = search.toString();
   return query ? `/dashboard/penjual/pengajuan?${query}` : "/dashboard/penjual/pengajuan";
 }
@@ -54,6 +55,7 @@ async function InquiriesContent({ searchParams }) {
 
   const params = (await searchParams) ?? {};
   const query = parseInquiryQuery(params);
+  const focusId = typeof params.id === "string" ? params.id : null;
 
   const { properties, inquiries } = getAgentDashboard();
   const filtered = [...filterInquiries(inquiries, query)].sort(
@@ -84,9 +86,10 @@ async function InquiriesContent({ searchParams }) {
         }
       />
 
-      <InfoNotice title="Tindak lanjut belum tersimpan">
-        Modul pengajuan belum tersambung ke database. Perubahan status di bawah hanya menampilkan
-        pratinjau alur (SRS-F-SEL-10); catatan tindak lanjut belum tercatat di log.
+      <InfoNotice title="Pratinjau tindak lanjut (belum tersimpan)">
+        Perubahan status pengajuan tampil sebagai pratinjau di layar ini dan belum tercatat di log
+        (SRS-F-SEL-10). Aturan tetap ditegakkan: hanya transisi yang sah, catatan wajib diisi, dan
+        jadwal ulang harus tanggal mendatang.
       </InfoNotice>
 
       <div className="flex flex-col gap-3 border-b border-ag-line sm:flex-row sm:items-end sm:justify-between">
@@ -101,7 +104,7 @@ async function InquiriesContent({ searchParams }) {
             return (
               <Link
                 key={tab.key}
-                href={tabHref(tab.key, query.type)}
+                href={tabHref(tab.key, query.type, focusId)}
                 aria-current={active ? "page" : undefined}
                 className={[
                   "whitespace-nowrap border-b-2 pb-2.5 pt-1 text-[13px] font-semibold",
@@ -119,6 +122,7 @@ async function InquiriesContent({ searchParams }) {
 
         <form method="get" role="search" aria-label="Cari pengajuan" className="flex gap-2 pb-2">
           {query.tab !== "semua" ? <input type="hidden" name="tab" value={query.tab} /> : null}
+          {focusId ? <input type="hidden" name="id" value={focusId} /> : null}
           <label htmlFor="inquiry-q" className="sr-only">
             Cari nama pembeli, nomor WhatsApp, atau nama properti
           </label>
@@ -154,6 +158,7 @@ async function InquiriesContent({ searchParams }) {
         properties={propertyOptions}
         transitions={SELLER_INQUIRY_ACTIONS}
         filterLabel={TABS.find((tab) => tab.key === query.tab)?.label ?? "Semua"}
+        focusId={focusId}
       />
     </div>
   );

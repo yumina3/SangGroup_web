@@ -2,16 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import ActionButton from "@/components/dashboard/ActionButton";
+import Modal from "@/components/dashboard/Modal";
 import { labelOf, SALE_STATUS } from "@/lib/dashboard/status-labels";
 
 /**
  * Menu "Ubah status" pada satu baris properti (SRS-F-SEL-07).
  *
  * Hanya transisi yang sah menurut matriks SRS §6.8 yang ditampilkan; pilihan
- * yang tidak diizinkan tidak muncul sama sekali.
+ * yang tidak diizinkan tidak muncul sama sekali. Memilih status membuka
+ * dialog konfirmasi karena status ketersediaan memengaruhi katalog publik.
  */
 export default function SaleStatusMenu({ property, options, onSave, triggerLabel = "Ubah status" }) {
   const [open, setOpen] = useState(false);
+  const [confirming, setConfirming] = useState(null);
   const [pending, setPending] = useState(false);
   const containerRef = useRef(null);
 
@@ -37,6 +41,14 @@ export default function SaleStatusMenu({ property, options, onSave, triggerLabel
 
   const disabled = options.length === 0;
 
+  async function confirm() {
+    if (!confirming) return;
+    setPending(true);
+    await onSave?.(confirming);
+    setPending(false);
+    setConfirming(null);
+  }
+
   return (
     <div className="relative inline-block text-left" ref={containerRef}>
       <button
@@ -47,7 +59,7 @@ export default function SaleStatusMenu({ property, options, onSave, triggerLabel
         disabled={disabled || pending}
         title={
           disabled
-            ? "Ketersediaan hanya bisa diubah bila listing sudah terverifikasi"
+            ? "Ketersediaan hanya bisa diubah bila listing sudah terverifikasi dan belum terjual"
             : undefined
         }
         className="inline-flex h-9 items-center rounded-dash px-2 text-[12px] font-semibold text-ag-gold hover:bg-ag-gold/10 disabled:cursor-not-allowed disabled:text-ag-slate-muted disabled:hover:bg-transparent"
@@ -70,11 +82,9 @@ export default function SaleStatusMenu({ property, options, onSave, triggerLabel
               key={option}
               type="button"
               role="menuitem"
-              onClick={async () => {
-                setPending(true);
-                await onSave?.(option);
-                setPending(false);
+              onClick={() => {
                 setOpen(false);
+                setConfirming(option);
               }}
               className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[13px] text-ag-slate hover:bg-ag-surface-low"
             >
@@ -93,6 +103,35 @@ export default function SaleStatusMenu({ property, options, onSave, triggerLabel
           ))}
         </div>
       ) : null}
+
+      <Modal
+        open={Boolean(confirming)}
+        onClose={() => setConfirming(null)}
+        title={`Tandai ${labelOf(SALE_STATUS, confirming ?? "AVAILABLE").toLowerCase()}?`}
+        description={`${property.title} · Unit ${property.unit}`}
+        footer={
+          <>
+            <ActionButton variant="outline" size="md" onClick={() => setConfirming(null)}>
+              Batal
+            </ActionButton>
+            <ActionButton variant="forest" size="md" pending={pending} onClick={confirm}>
+              Ya, ubah status
+            </ActionButton>
+          </>
+        }
+      >
+        <p className="text-[13px] leading-relaxed text-ag-slate-secondary">
+          Ketersediaan berubah dari{" "}
+          <strong className="font-semibold text-ag-slate">
+            {labelOf(SALE_STATUS, property.saleStatus)}
+          </strong>{" "}
+          menjadi{" "}
+          <strong className="font-semibold text-ag-slate">
+            {labelOf(SALE_STATUS, confirming ?? "AVAILABLE")}
+          </strong>
+          . Status ini menentukan apakah kavling tampil tersedia di katalog publik.
+        </p>
+      </Modal>
     </div>
   );
 }

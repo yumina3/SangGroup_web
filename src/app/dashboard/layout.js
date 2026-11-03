@@ -1,10 +1,19 @@
+import { redirect } from "next/navigation";
+
 import Navbar from "@/components/agen/Navbar";
 import { ToastProvider } from "@/components/dashboard/Toast";
-import { getAgentDashboard } from "@/lib/dashboard/agent-data";
+import { currentPenjualAgent, readPenjualSession } from "@/lib/auth/penjual-session";
 
 export const metadata = {
   title: { default: "Dashboard", template: "%s — Sang Group" },
 };
+
+/**
+ * Layout ini memeriksa sesi (cookie) di setiap request, jadi seluruh rute di
+ * dalamnya tidak bisa diprerender. Dinyatakan sekali di sini; halaman di
+ * dalamnya tetap memakai <Suspense> untuk data yang lambat.
+ */
+export const instant = false;
 
 /**
  * Layout grup dashboard — satu-satunya tempat navbar agen dipasang.
@@ -14,14 +23,15 @@ export const metadata = {
  * halaman `/dashboard/**` otomatis memakai navbar yang sama dan tidak boleh
  * membuat navbar sendiri (SRS §4, SRS-D-07).
  *
- * Layout ini tidak membaca cookies/headers, sehingga kerangka dashboard ikut
- * prerender. Pemeriksaan sesi dan peran (SRS-F-AUTH-03) dijalankan di lapisan
- * server saat modul auth disambungkan. Sampai saat itu `agent` adalah data
- * contoh `AGENT_DEMO`; begitu sesi nyata ada, ganti dengan profil pengguna
- * aktif dan biarkan `null` bila belum masuk — topbar menampilkan "Masuk".
+ * Pemeriksaan sesi: tanpa cookie sesi /penjual yang sah, pengunjung langsung
+ * diarahkan ke gerbang login /penjual. Cookie itu hanya ditulis oleh Server
+ * Action login penjual, sehingga layout ini dirender di request time.
  */
-export default function DashboardGroupLayout({ children }) {
-  const { agent } = getAgentDashboard();
+export default async function DashboardGroupLayout({ children }) {
+  const session = await readPenjualSession();
+  if (!session) redirect("/penjual");
+
+  const agent = currentPenjualAgent();
 
   return (
     <ToastProvider>

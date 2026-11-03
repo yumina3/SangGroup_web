@@ -19,7 +19,8 @@ import {
 /**
  * Status sebuah rute dashboard.
  *
- * - "ready"      : halaman ada di SRS §4 dan sudah dibangun.
+ * - "ready"      : halaman sudah dibangun — termasuk halaman pengembangan
+ *                  lanjutan SRS §3.5 seperti Deals/Pipeline dan Tugas.
  * - "later"      : halaman ada di SRS §4 tetapi modulnya dikerjakan terpisah.
  * - "outOfScope" : layar ada di docs/agen tetapi SRS §3.5 menyatakan tidak
  *                  dibangun, jadi menu hanya ditampilkan dengan keterangan
@@ -42,7 +43,7 @@ export const AGENT_NAV_GROUPS = [
     title: null,
     items: [
       {
-        label: "Ringkasan",
+        label: "Dashboard",
         href: "/dashboard/penjual",
         status: NAV_STATUS.ready,
         icon: IconHome,
@@ -64,8 +65,18 @@ export const AGENT_NAV_GROUPS = [
         status: NAV_STATUS.ready,
         icon: IconInbox,
       },
-      { label: "Deals / Pipeline", href: null, status: NAV_STATUS.outOfScope, icon: IconKanban },
-      { label: "Tugas Tindak Lanjut", href: null, status: NAV_STATUS.outOfScope, icon: IconCheckSquare },
+      {
+        label: "Deals / Pipeline",
+        href: "/dashboard/penjual/deals",
+        status: NAV_STATUS.ready,
+        icon: IconKanban,
+      },
+      {
+        label: "Tugas Tindak Lanjut",
+        href: "/dashboard/penjual/tugas",
+        status: NAV_STATUS.ready,
+        icon: IconCheckSquare,
+      },
       { label: "Kontak", href: null, status: NAV_STATUS.outOfScope, icon: IconUsers },
       { label: "Pesan", href: null, status: NAV_STATUS.outOfScope, icon: IconMessage },
     ],

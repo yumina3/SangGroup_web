@@ -30,8 +30,9 @@ function formatBytes(bytes) {
  * upload URL (SRS-F-FILE-02).
  *
  * Karena Supabase Storage belum dikonfigurasi, berkas hanya ditinjau di
- * perangkat (pratinjau object URL) dan tidak dikirim ke server. Catatan itu
- * ditampilkan apa adanya, bukan disembunyikan.
+ * perangkat (pratinjau object URL) dan tidak dikirim ke server. Batas jumlah,
+ * tipe, dan ukuran tetap ditegakkan sehingga pengguna tahu berkas mana saja
+ * yang akan sah saat unggah aktif.
  */
 export default function PhotoUploader() {
   const [photos, setPhotos] = useState([]);

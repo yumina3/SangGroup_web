@@ -47,10 +47,11 @@ export default function RecentInquiriesTable({ inquiries }) {
               </td>
               <td className="px-3 py-3 text-right">
                 <a
-                  href="/dashboard/penjual/pengajuan"
+                  href={`/dashboard/penjual/pengajuan?id=${encodeURIComponent(inquiry.id)}`}
                   className="text-[13px] font-semibold text-ag-forest hover:text-ag-gold"
                 >
                   {inquiry.status === "PENDING" ? "Tanggapi" : "Lihat"}
+                  <span className="sr-only"> — pengajuan {inquiry.buyer.name}</span>
                 </a>
               </td>
             </tr>

@@ -1,25 +1,26 @@
 import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
 /**
- * Proxy (pengganti middleware pada Next.js 16).
+ * Proxy (pengganti middleware Next 16).
  *
- * Tugas saat ini: meneruskan `pathname` request ke server component lewat
- * header `x-pathname`, supaya NavbarSite dapat menandai menu yang aktif.
- * Layout grup (site) membaca header ini.
- *
- * Header dibuat ulang per request (bukan dari header klien) agar tidak bisa
- * dipalsukan dari browser.
+ * Satu tugas: meng-inject `x-pathname` untuk permintaan GET/HEAD agar komponen
+ * layout bisa membaca rute aktif untuk navigasi sidebar. Metode lain (POST dsb.,
+ * termasuk Server Action) tidak disentuh sama sekali.
  */
 export function proxy(request) {
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set("x-pathname", request.nextUrl.pathname);
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return NextResponse.next();
+  }
 
-  return NextResponse.next({
-    request: { headers: requestHeaders },
-  });
+  const headers = new Headers(request.headers);
+  headers.set("x-pathname", request.nextUrl.pathname);
+
+  const res = NextResponse.next({ request: { headers } });
+  res.headers.delete("x-pathname");
+  return res;
 }
 
 export const config = {
-  // Lewati aset statis dan berkas Next.js internal.
   matcher: ["/((?!_next/static|_next/image|favicon.ico|logo_sang.png).*)"],
 };

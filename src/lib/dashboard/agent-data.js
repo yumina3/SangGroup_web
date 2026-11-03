@@ -48,6 +48,7 @@
  *
  * @typedef {object} AgentInquiry
  * @property {string} id
+ * @property {string} ticket                         nomor tiket tampilan, mis. #INQ-2026-081
  * @property {InquiryType} type
  * @property {InquiryStatus} status
  * @property {string} createdAt                      ISO string
@@ -55,7 +56,7 @@
  * @property {string|null} message
  * @property {number|null} offerPrice
  * @property {string|null} sellerNote
- * @property {{ id: string, name: string, phone: string }} buyer
+ * @property {{ id: string, name: string, phone: string, email: string }} buyer
  * @property {{ id: string, title: string, price: number }} property
  *
  * @typedef {object} AgentSummary
@@ -270,6 +271,7 @@ const PROPERTIES = [
 const INQUIRIES = [
   {
     id: "inq-501",
+    ticket: "#INQ-2026-081",
     type: "VISIT",
     status: "PENDING",
     createdAt: "2026-10-28T02:30:00.000Z",
@@ -277,11 +279,17 @@ const INQUIRIES = [
     message: "Ingin melihat kondisi unit dan jalan lingkungan pada pagi hari.",
     offerPrice: null,
     sellerNote: null,
-    buyer: { id: "byr-21", name: "Rani Hartono", phone: "+6281357001122" },
+    buyer: {
+      id: "byr-21",
+      name: "Rani Hartono",
+      phone: "+6281357001122",
+      email: "rani.hartono@gmail.com",
+    },
     property: { id: "prp-101", title: "Rumah Tipe 36 — Blok A", price: 545_000_000 },
   },
   {
     id: "inq-502",
+    ticket: "#INQ-2026-082",
     type: "INTEREST",
     status: "PENDING",
     createdAt: "2026-10-27T13:15:00.000Z",
@@ -289,11 +297,17 @@ const INQUIRIES = [
     message: "Tertarik, apakah masih bisa negosiasi bila pembayaran tunai keras?",
     offerPrice: 700_000_000,
     sellerNote: null,
-    buyer: { id: "byr-22", name: "Arif Setyawan", phone: "+6281212003344" },
+    buyer: {
+      id: "byr-22",
+      name: "Arif Setyawan",
+      phone: "+6281212003344",
+      email: "arif.setyawan@gmail.com",
+    },
     property: { id: "prp-102", title: "Rumah Tipe 45 — Kavling B", price: 735_000_000 },
   },
   {
     id: "inq-503",
+    ticket: "#INQ-2026-083",
     type: "VISIT",
     status: "CONFIRMED",
     createdAt: "2026-10-24T09:40:00.000Z",
@@ -301,11 +315,17 @@ const INQUIRIES = [
     message: "Membawa keluarga untuk melihat langsung denah ruang keluarga.",
     offerPrice: null,
     sellerNote: "Dijadwalkan. Surveyor gallery akan menemani.",
-    buyer: { id: "byr-23", name: "Dian Larasati", phone: "+6281298005566" },
+    buyer: {
+      id: "byr-23",
+      name: "Dian Larasati",
+      phone: "+6281298005566",
+      email: "dian.larasati@gmail.com",
+    },
     property: { id: "prp-103", title: "Rumah Tipe 60 — Kavling C", price: 1_180_000_000 },
   },
   {
     id: "inq-504",
+    ticket: "#INQ-2026-084",
     type: "INTEREST",
     status: "RESCHEDULED",
     createdAt: "2026-10-22T04:05:00.000Z",
@@ -313,11 +333,17 @@ const INQUIRIES = [
     message: "Menunggu pencairan dana, mohon ditawarkan jadwal berbincang minggu depan.",
     offerPrice: 1_150_000_000,
     sellerNote: "Dijadwalkan ulang ke pekan depan sesuai permintaan pembeli.",
-    buyer: { id: "byr-24", name: "Bagas Nugroho", phone: "+6281376007788" },
+    buyer: {
+      id: "byr-24",
+      name: "Bagas Nugroho",
+      phone: "+6281376007788",
+      email: "bagas.nugroho@gmail.com",
+    },
     property: { id: "prp-103", title: "Rumah Tipe 60 — Kavling C", price: 1_180_000_000 },
   },
   {
     id: "inq-505",
+    ticket: "#INQ-2026-079",
     type: "VISIT",
     status: "COMPLETED",
     createdAt: "2026-10-05T01:20:00.000Z",
@@ -325,11 +351,17 @@ const INQUIRIES = [
     message: "Kunjungan pertama untuk membandingkan dua tipe di cluster yang sama.",
     offerPrice: null,
     sellerNote: "Kunjungan selesai, pembeli memilih tipe lain.",
-    buyer: { id: "byr-25", name: "Hendra Wibisono", phone: "+6281411009900" },
+    buyer: {
+      id: "byr-25",
+      name: "Hendra Wibisono",
+      phone: "+6281411009900",
+      email: "hendra.wibisono@gmail.com",
+    },
     property: { id: "prp-101", title: "Rumah Tipe 36 — Blok A", price: 545_000_000 },
   },
   {
     id: "inq-506",
+    ticket: "#INQ-2026-076",
     type: "INTEREST",
     status: "REJECTED",
     createdAt: "2026-09-29T06:55:00.000Z",
@@ -337,9 +369,69 @@ const INQUIRIES = [
     message: "Menanyakan kemungkinan angsuran tanpa DP.",
     offerPrice: 380_000_000,
     sellerNote: "Tawaran terlalu jauh dari harga resmi dan skema KPR tidak tersedia.",
-    buyer: { id: "byr-26", name: "Kurnia Saputra", phone: "+6281522004433" },
+    buyer: {
+      id: "byr-26",
+      name: "Kurnia Saputra",
+      phone: "+6281522004433",
+      email: "kurnia.saputra@gmail.com",
+    },
     property: { id: "prp-101", title: "Rumah Tipe 36 — Blok A", price: 545_000_000 },
   },
+  {
+    id: "inq-507",
+    ticket: "#INQ-2026-085",
+    type: "VISIT",
+    status: "PENDING",
+    createdAt: "2026-10-30T01:20:00.000Z",
+    scheduledAt: "2026-11-06T02:30:00.000Z",
+    message: "Minta simulasi KPR dan memastikan unit masih tersedia sebelum survei.",
+    offerPrice: null,
+    sellerNote: "Sudah membalas WhatsApp, pembeli minta simulasi KPR dikirim hari ini.",
+    buyer: {
+      id: "byr-27",
+      name: "Dewi Anggraini",
+      phone: "+6281288001177",
+      email: "dewi.anggraini@gmail.com",
+    },
+    property: { id: "prp-103", title: "Rumah Tipe 60 — Kavling C", price: 1_180_000_000 },
+  },
+  {
+    id: "inq-508",
+    ticket: "#INQ-2026-086",
+    type: "INTEREST",
+    status: "COMPLETED",
+    createdAt: "2026-10-20T06:10:00.000Z",
+    scheduledAt: null,
+    message: "Sepakat dengan harga penawaran bila unit dipesan sebelum akhir bulan.",
+    offerPrice: 720_000_000,
+    sellerNote: "Deal disepakati, unit B-07 dipesan dan berkas KPR sedang diproses.",
+    buyer: {
+      id: "byr-28",
+      name: "Bagas Setiawan",
+      phone: "+6281399002211",
+      email: "bagas.setiawan@gmail.com",
+    },
+    property: { id: "prp-102", title: "Rumah Tipe 45 — Kavling B", price: 735_000_000 },
+  },
+  {
+    id: "inq-509",
+    ticket: "#INQ-2026-087",
+    type: "INTEREST",
+    status: "COMPLETED",
+    createdAt: "2026-08-28T03:45:00.000Z",
+    scheduledAt: null,
+    message: "Melanjutkan pembelian unit hook yang sebelumnya sempat dilihat keluarga.",
+    offerPrice: 680_000_000,
+    sellerNote: "Pembayaran lunas, unit D-09 tercatat terjual.",
+    buyer: {
+      id: "byr-29",
+      name: "Sinta Maharani",
+      phone: "+6281255008899",
+      email: "sinta.maharani@gmail.com",
+    },
+    property: { id: "prp-104", title: "Rumah Tipe 45 — Blok D", price: 690_000_000 },
+  },
 ];
+
 
 export const AGENT_CATEGORY_OPTIONS = ["Rumah", "Ruko", "Kavling", "Apartemen"];

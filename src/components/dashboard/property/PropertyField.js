@@ -84,7 +84,7 @@ export default function PropertyField({
               ? "cursor-not-allowed border-ag-line bg-ag-surface-low text-ag-slate-secondary"
               : error
                 ? "bg-white border-red-400 focus:border-red-500"
-                : "bg-white border-ag-line hover:border-ag-slate-muted focus:border-ag-gold-base",
+                : "bg-white border-ag-line hover:border-ag-slate-secondary focus:border-ag-gold-base",
             "outline-none",
           ].join(" ")}
         />
@@ -145,7 +145,7 @@ export function PropertyTextarea({ label, name, value, onChange, error, hint, ma
           "w-full resize-y rounded-lg border bg-white px-3 py-2.5 text-[13px] leading-relaxed text-ag-slate outline-none",
           error
             ? "border-red-400 focus:border-red-500"
-            : "border-ag-line hover:border-ag-slate-muted focus:border-ag-gold-base",
+            : "border-ag-line hover:border-ag-slate-secondary focus:border-ag-gold-base",
         ].join(" ")}
       />
 
@@ -192,7 +192,7 @@ export function PropertySelect({ label, name, value, onChange, options, error, r
           "h-10 w-full cursor-pointer rounded-lg border bg-white px-3 text-[13px] text-ag-slate outline-none",
           error
             ? "border-red-400 focus:border-red-500"
-            : "border-ag-line hover:border-ag-slate-muted focus:border-ag-gold-base",
+            : "border-ag-line hover:border-ag-slate-secondary focus:border-ag-gold-base",
         ].join(" ")}
       >
         {options.map((option) => (
