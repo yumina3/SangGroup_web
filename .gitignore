@@ -51,6 +51,7 @@ build*.log
 *.tmp.mjs
 fix-encoding.py
 dev.log
+dev-penjual3.log
 
 # data lokal / editor
 .idea/
@@ -66,4 +67,4 @@ dev.log
 /uploads
 
 PROMPT-VERIFIKASI.md
-AGENTS.md
+AGENTS.md deals

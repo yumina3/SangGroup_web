@@ -3,18 +3,20 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-
-
 import AgentAvatar from "@/components/dashboard/AgentAvatar";
 import {
   IconBell,
   IconCalendar,
   IconChevronDown,
   IconClose,
+  IconHome,
   IconMenu,
   IconPlus,
   IconSearch,
+  IconSettings,
+  IconExit,
 } from "@/components/dashboard/icons";
+import { penjualLogoutAction } from "@/app/penjual/actions";
 import { AGENT_NAV_GROUPS, FALLBACK_NAV_ICON, NAV_STATUS } from "./agent-nav";
 
 /**
@@ -44,7 +46,7 @@ export default function Navbar({ agent, children }) {
 
       {/* Hijau tua setinggi penuh dari atas sampai dasar layar. */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-[var(--ag-sidebar-w)] lg:block">
-        <Sidebar />
+        <Sidebar agent={agent} />
       </aside>
 
       <MenuDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
@@ -74,7 +76,7 @@ export default function Navbar({ agent, children }) {
  * menggulir bila daftar melebihi tinggi layar; kepala merek dan tautan
  * "kembali ke situs" tetap menempel.
  */
-export function Sidebar() {
+export function Sidebar({ agent }) {
   return (
     <div className="flex h-full flex-col bg-ag-sidebar text-white">
       <div className="shrink-0">
@@ -85,7 +87,20 @@ export function Sidebar() {
         <SidebarNav />
       </div>
 
-      <div className="shrink-0 border-t border-white/10 px-3 py-3">
+      <div className="shrink-0 space-y-1 border-t border-white/10 px-3 py-3">
+        {agent ? (
+          <Link
+            href="/dashboard/penjual/pengaturan"
+            className="flex items-center gap-2.5 rounded-lg px-2 py-2 hover:bg-white/10"
+          >
+            <AgentAvatar agent={agent} size={32} />
+            <span className="min-w-0 leading-tight">
+              <span className="block truncate text-[13px] font-semibold text-white">{agent.name}</span>
+              <span className="block truncate text-[11px] text-ag-gold-light">Agen · {agent.agentCode}</span>
+            </span>
+          </Link>
+        ) : null}
+
         <Link
           href="/"
           className="flex min-h-9 items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium text-white/70 hover:bg-white/10 hover:text-white"
@@ -137,7 +152,7 @@ export function SidebarBrand({ onNavigate, compact = false }) {
  * Semua item selalu tampil — yang belum dibangun diberi keterangan "Segera",
  * bukan dibuang — sehingga pengguna tinggal menggulir sidebar untuk melihat
  * seluruh menu. Sorotan menu aktif dipasang `MenuDrawer` lewat atribut
- * `data-nav-href` (lihat `menu-active.js`).
+ * `data-nav-href`.
  */
 export function SidebarNav({ onNavigate }) {
   return (
@@ -265,31 +280,105 @@ export function Topbar({ agent, onToggleMenu, menuOpen = false }) {
 
         <span aria-hidden="true" className="mx-1 hidden h-8 w-px bg-ag-line sm:block" />
 
-        {agent ? (
-          <div className="relative flex items-center gap-2.5">
-            <a
-              href="/dashboard/penjual/pengaturan"
-              className="flex items-center gap-2.5 rounded-lg px-1 py-1 text-left transition-colors hover:bg-ag-surface-low"
-              aria-label={`Profil agen ${agent.name} — buka pengaturan`}
-            >
-              <AgentAvatar agent={agent} />
-              <span className="hidden flex-col leading-tight sm:flex">
-                <span className="text-[13px] font-bold text-ag-slate">{agent.name}</span>
-                <span className="text-[11px] text-ag-slate-muted">Agen · {agent.agentCode}</span>
-              </span>
-              <IconChevronDown size={16} className="hidden text-ag-slate-muted sm:block" />
-            </a>
-          </div>
-        ) : (
-          <a
-            href="/login?next=/dashboard/penjual"
-            className="rounded-lg bg-ag-forest px-3 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-ag-forest-medium"
-          >
-            Masuk
-          </a>
-        )}
+        {agent ? <ProfileMenu agent={agent} /> : null}
       </div>
     </header>
+  );
+}
+
+/**
+ * Menu profil agen di topbar: identitas + tautan profil, pengaturan, dan
+ * tombol keluar. Keluar memakai Server Action agar cookie sesi dihapus di
+ * server, bukan sekadar menyembunyikan halaman.
+ */
+export function ProfileMenu({ agent }) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    function handlePointer(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+    function handleKey(event) {
+      if (event.key === "Escape") setOpen(false);
+    }
+
+    document.addEventListener("mousedown", handlePointer);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handlePointer);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-controls="agent-profile-menu"
+        className="flex items-center gap-2.5 rounded-lg px-1 py-1 text-left transition-colors hover:bg-ag-surface-low"
+        aria-label={`Profil agen ${agent.name}`}
+      >
+        <AgentAvatar agent={agent} />
+        <span className="hidden flex-col leading-tight sm:flex">
+          <span className="text-[13px] font-bold text-ag-slate">{agent.name}</span>
+          <span className="text-[11px] text-ag-slate-muted">Agen · {agent.agentCode}</span>
+        </span>
+        <IconChevronDown size={16} className="hidden text-ag-slate-muted sm:block" />
+      </button>
+
+      {open ? (
+        <div
+          id="agent-profile-menu"
+          role="menu"
+          aria-label="Menu profil agen"
+          className="absolute right-0 z-40 mt-1.5 w-64 rounded-lg border border-ag-line bg-white p-1.5 shadow-lg"
+        >
+          <div className="border-b border-slate-100 px-2.5 pb-2.5 pt-1.5">
+            <p className="truncate text-[13px] font-bold text-ag-slate">{agent.name}</p>
+            <p className="truncate text-[11.5px] text-ag-slate-muted">{agent.email}</p>
+            <p className="mt-1 text-[11px] text-ag-slate-muted">Agen · {agent.agentCode}</p>
+          </div>
+
+          <Link
+            href="/dashboard/penjual/pengaturan"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] text-ag-slate hover:bg-ag-surface-low"
+          >
+            <IconHome size={16} className="text-ag-slate-muted" />
+            Profil saya
+          </Link>
+          <Link
+            href="/dashboard/penjual/pengaturan?tab=keamanan"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] text-ag-slate hover:bg-ag-surface-low"
+          >
+            <IconSettings size={16} className="text-ag-slate-muted" />
+            Keamanan akun
+          </Link>
+
+          <form action={penjualLogoutAction} className="mt-1 border-t border-slate-100 pt-1">
+            <button
+              type="submit"
+              role="menuitem"
+              className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-[13px] font-semibold text-red-600 hover:bg-red-50"
+            >
+              <IconExit size={16} />
+              Keluar
+            </button>
+          </form>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -323,11 +412,14 @@ export function MenuDrawer({ open, onClose }) {
     sync();
     window.addEventListener("popstate", sync);
     return () => window.removeEventListener("popstate", sync);
-  }, [open]);  useEffect(() => {
+  }, [open]);
+
+  useEffect(() => {
     if (markerRef.current === pathname) return;
     markerRef.current = pathname;
     applyActiveNav(pathname);
   }, [pathname]);
+
   useEffect(() => {
     if (!open) return undefined;
 
@@ -397,13 +489,22 @@ export function MenuDrawer({ open, onClose }) {
           <SidebarNav onNavigate={onClose} />
         </div>
 
-        <div className="shrink-0 border-t border-white/10 px-3 py-3">
+        <div className="shrink-0 space-y-1 border-t border-white/10 px-3 py-3">
           <Link
             href="/"
             className="flex min-h-9 items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium text-white/70 hover:bg-white/10 hover:text-white"
           >
             Kembali ke situs publik
           </Link>
+          <form action={penjualLogoutAction}>
+            <button
+              type="submit"
+              className="flex min-h-9 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-white/70 hover:bg-white/10 hover:text-white"
+            >
+              <IconExit size={16} />
+              Keluar
+            </button>
+          </form>
         </div>
       </div>
     </div>

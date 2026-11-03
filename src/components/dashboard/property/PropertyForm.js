@@ -15,7 +15,11 @@ import PropertyField, {
 } from "@/components/dashboard/property/PropertyField";
 import { AGENT_CATEGORY_OPTIONS } from "@/lib/dashboard/agent-data";
 import { formatRupiah } from "@/lib/dashboard/format";
-import { KEY_FIELDS, validatePropertyForm } from "@/lib/validators/property";
+import {
+  changedKeyFields,
+  submissionOptions,
+  validatePropertyForm,
+} from "@/lib/validators/property";
 
 const CATEGORY_OPTIONS = AGENT_CATEGORY_OPTIONS.map((category) => ({
   value: category,
@@ -72,7 +76,9 @@ function formFromProperty(property) {
  *
  * Simpan belum menyentuh database (modul Prisma properti belum tersambung),
  * jadi hasilnya selalu pesan jujur "belum tersimpan" — bukan pemberitahuan
- * "berhasil" palsu.
+ * "berhasil" palsu. Tombol simpan mengikuti status listing: draft hanya untuk
+ * DRAFT, "kirim verifikasi" untuk draft/ditolak/terverifikasi/disembunyikan,
+ * dan seluruh form dikunci selama PENDING (admin sedang memeriksa).
  */
 export default function PropertyForm({ mode = "create", property = null }) {
   const toast = useToast();
@@ -81,6 +87,9 @@ export default function PropertyForm({ mode = "create", property = null }) {
   const [form, setForm] = useState(() => (property ? formFromProperty(property) : emptyForm()));
   const [errors, setErrors] = useState({});
   const [saved, setSaved] = useState(null);
+
+  const options = submissionOptions(property?.listingStatus);
+  const locked = options.locked;
 
   // Validator dipakai langsung (bukan `import()` di dalam handler): form ini
   // kecil dan validasinya harus jalan sinkron saat tombol ditekan.
@@ -92,6 +101,14 @@ export default function PropertyForm({ mode = "create", property = null }) {
   }
 
   function submit(submission) {
+    if (locked) {
+      toast.push(
+        "Listing sedang menunggu verifikasi admin. Perubahan belum bisa disimpan.",
+        "danger",
+      );
+      return;
+    }
+
     const result = validatePropertyForm(form, { submission });
 
     if (!result.ok) {
@@ -110,24 +127,44 @@ export default function PropertyForm({ mode = "create", property = null }) {
 
     setErrors({});
     setSaved({ submission, value: result.value });
+
+    const unchanged =
+      isEdit && property?.listingStatus === "VERIFIED" && changedKeyFields(property, form).length === 0;
+
     toast.push(
       submission === "DRAFT"
-        ? "Draft tidak tersimpan: modul database properti belum tersambung."
-        : "Pengajuan verifikasi belum tersimpan: modul database properti belum tersambung.",
+        ? "Pratinjau: draft belum tersimpan (penyimpanan belum aktif)."
+        : unchanged
+          ? "Pratinjau: perubahan pada field non-kunci belum tersimpan; status tetap terverifikasi."
+          : property?.listingStatus === "VERIFIED"
+            ? "Pratinjau: listing akan kembali ke menunggu verifikasi, belum tersimpan."
+            : "Pratinjau: pengajuan verifikasi belum tersimpan.",
       "info",
     );
   }
 
   return (
     <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-12">
-      <form
-        noValidate
-        onSubmit={(event) => {
-          event.preventDefault();
-          submit("PENDING");
-        }}
-        className="space-y-5 xl:col-span-8"
-      >
+      {locked ? (
+        <p
+          role="status"
+          className="rounded-dash border border-amber-200 bg-amber-50 px-4 py-3 text-[12.5px] leading-relaxed text-amber-800 xl:col-span-12"
+        >
+          <strong className="font-semibold">Listing sedang menunggu verifikasi admin.</strong> Data
+          dikunci sementara agar antrean verifikasi tidak berubah. Setelah admin memutuskan, Anda bisa
+          mengubah atau mengirim ulang listing ini.
+        </p>
+      ) : null}
+
+      <fieldset disabled={locked} className="contents">
+        <form
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault();
+            submit("PENDING");
+          }}
+          className="space-y-5 xl:col-span-8"
+        >
         <Panel title="Informasi utama" description="Nama listing, kategori, dan posisi kavling.">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="md:col-span-2">
@@ -340,36 +377,37 @@ export default function PropertyForm({ mode = "create", property = null }) {
         <KeyFieldNotice mode={mode} property={property} form={form} />
 
         <div className="flex flex-wrap items-center justify-end gap-2.5 rounded-dash border border-ag-line bg-white px-5 py-4">
-          <ActionButton
-            as="link"
-            href="/dashboard/penjual/properti"
-            variant="outline"
-          >
-            Batal
+          <ActionButton as="link" href="/dashboard/penjual/properti" variant="outline">
+            {locked ? "Kembali ke daftar" : "Batal"}
           </ActionButton>
-          <ActionButton variant="forest" type="button" onClick={() => submit("DRAFT")}>
-            Simpan sebagai draft
-          </ActionButton>
-          <ActionButton
-            type="submit"
-            variant="primary"
-            onClick={() => submit("PENDING")}
-          >
-            {isEdit ? "Simpan & kirim ulang" : "Kirim untuk verifikasi"}
-          </ActionButton>
+          {options.draft ? (
+            <ActionButton
+              variant="forest"
+              type="button"
+              onClick={() => submit("DRAFT")}
+              disabled={locked}
+            >
+              Simpan sebagai draft
+            </ActionButton>
+          ) : null}
+          {options.verify ? (
+            <ActionButton type="submit" variant="primary" disabled={locked}>
+              {isEdit ? "Simpan & kirim ulang" : "Kirim untuk verifikasi"}
+            </ActionButton>
+          ) : null}
         </div>
       </form>
 
-      <aside className="space-y-5 xl:col-span-4">
-        <Panel title="Status listing" description="Alur verifikasi listing Anda.">
+        <aside className="space-y-5 xl:col-span-4">
+          <Panel title="Status listing" description="Alur verifikasi listing Anda.">
           <ol className="space-y-3">
             <StatusStep
-              done
+              active={!isEdit || property?.listingStatus === "DRAFT"}
               title="Draft"
-              description="Listing disimpan tetapi belum dikirim ke admin."
+              description="Listing tersimpan tetapi belum dikirim ke admin."
             />
             <StatusStep
-              active={(!isEdit && true) || property?.listingStatus === "PENDING"}
+              active={(!isEdit && !locked) || property?.listingStatus === "PENDING"}
               title="Menunggu verifikasi"
               description="Admin memeriksa kelengkapan data, foto, dan koordinat."
             />
@@ -379,8 +417,14 @@ export default function PropertyForm({ mode = "create", property = null }) {
               description="Listing tayang di katalog publik dan bisa menerima pengajuan."
             />
             <StatusStep
+              active={property?.listingStatus === "REJECTED"}
               title="Ditolak"
               description="Alasan penolakan muncul di halaman properti; perbaiki lalu kirim ulang."
+            />
+            <StatusStep
+              active={property?.listingStatus === "HIDDEN"}
+              title="Disembunyikan"
+              description="Listing tidak tayang; kirim untuk verifikasi agar tampil kembali."
             />
           </ol>
         </Panel>
@@ -419,18 +463,19 @@ export default function PropertyForm({ mode = "create", property = null }) {
             </p>
           </Modal>
         ) : null}
-      </aside>
+        </aside>
+      </fieldset>
     </div>
   );
 }
 
-function StatusStep({ title, description, active = false, done = false }) {
+function StatusStep({ title, description, active = false }) {
   return (
     <li className="flex gap-3">
       <span
         aria-hidden="true"
         className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
-          active ? "bg-ag-gold-base" : done ? "bg-ag-available" : "bg-slate-300"
+          active ? "bg-ag-gold-base" : "bg-slate-300"
         }`}
       />
       <div>
@@ -451,7 +496,7 @@ function StatusStep({ title, description, active = false, done = false }) {
 function KeyFieldNotice({ mode, property, form }) {
   if (mode !== "edit" || property?.listingStatus !== "VERIFIED") return null;
 
-  const changed = KEY_FIELDS.filter((key) => String(property?.[key] ?? "") !== String(form[key] ?? ""));
+  const changed = changedKeyFields(property, form);
 
   if (changed.length === 0) return null;
 

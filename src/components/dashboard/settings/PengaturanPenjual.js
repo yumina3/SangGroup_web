@@ -7,9 +7,11 @@ import InfoNotice from "@/components/dashboard/InfoNotice";
 import PageHeader from "@/components/dashboard/PageHeader";
 import ToggleSwitch from "@/components/dashboard/ToggleSwitch";
 import AgentAvatar from "@/components/dashboard/AgentAvatar";
+import { IconExit } from "@/components/dashboard/icons";
 import PropertyField from "@/components/dashboard/property/PropertyField";
 import { useToast } from "@/components/dashboard/Toast";
 import { getAgentDashboard } from "@/lib/dashboard/agent-data";
+import { penjualLogoutAction } from "@/app/penjual/actions";
 
 const TABS = [
   { key: "profil", label: "Profil" },
@@ -50,10 +52,13 @@ const NOTIFICATIONS = [
  * Halaman ini tidak memasang navbar sendiri — sidebar/topbar agen berasal
  * dari layout `/dashboard`. Karena penyimpanan profil dan langganan push
  * belum aktif, setiap aksi memberi tahu bahwa perubahan belum tersimpan.
+ *
+ * `initialTab` boleh diisi dari halaman (`?tab=keamanan`) supaya tautan dari
+ * menu profil langsung membuka bagian yang dituju.
  */
-export default function PengaturanPenjual() {
+export default function PengaturanPenjual({ initialTab = "profil" }) {
   const { agent } = getAgentDashboard();
-  const [tab, setTab] = useState("profil");
+  const [tab, setTab] = useState(TABS.some((item) => item.key === initialTab) ? initialTab : "profil");
 
   return (
     <div className="space-y-5">
@@ -91,7 +96,12 @@ export default function PengaturanPenjual() {
       </div>
 
       <div className="max-w-4xl">
-        {tab === "profil" ? <ProfilTab agent={agent} /> : null}
+        {tab === "profil" ? (
+          <div className="space-y-5">
+            <ProfilTab agent={agent} />
+            <SesiTab />
+          </div>
+        ) : null}
         {tab === "keamanan" ? <KeamananTab /> : null}
         {tab === "notifikasi" ? <NotifikasiTab /> : null}
       </div>
@@ -237,6 +247,58 @@ function ProfilTab({ agent }) {
   );
 }
 
+/**
+ * Sesi & keluar (tombol "Keluar" di bagian profil agen).
+ *
+ * Tombol keluar adalah tombol submit form yang menjalankan Server Action
+ * `penjualLogoutAction`: cookie sesi dihapus di server lalu pengguna
+ * diarahkan ke gerbang login /penjual. Garis besar sungguhan, bukan sekadar
+ * menyembunyikan halaman di browser.
+ */
+function SesiTab() {
+  const [confirming, setConfirming] = useState(false);
+
+  return (
+    <section className="rounded-dash border border-ag-line bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.03)]">
+      <div className="border-b border-slate-100 pb-4">
+        <h2 className="text-[16px] font-bold text-ag-slate">Sesi &amp; keluar</h2>
+        <p className="mt-0.5 text-[13px] text-ag-slate-secondary">
+          Akhiri sesi di perangkat ini. Anda perlu masuk kembali untuk membuka dashboard.
+        </p>
+      </div>
+
+      <form action={penjualLogoutAction} className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="max-w-md text-[12.5px] leading-relaxed text-ag-slate-secondary">
+          Sesi berlaku hingga 8 jam. Keluar sekarang menghapus cookie sesi di browser ini.
+        </p>
+        <ActionButton
+          type={confirming ? "submit" : "button"}
+          variant={confirming ? "danger" : "outline"}
+          onClick={confirming ? undefined : () => setConfirming(true)}
+          disabled={false}
+        >
+          <IconExit size={16} />
+          {confirming ? "Ya, keluar sekarang" : "Keluar dari akun"}
+        </ActionButton>
+      </form>
+
+      {confirming ? (
+        <p role="status" className="mt-3 rounded-tag bg-red-50 px-3 py-2 text-[12px] font-medium text-red-700">
+          Tekan “Ya, keluar sekarang” untuk mengakhiri sesi, atau{" "}
+          <button
+            type="button"
+            onClick={() => setConfirming(false)}
+            className="font-semibold underline underline-offset-2"
+          >
+            batalkan
+          </button>
+          .
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 function scoreOf(password) {
   if (!password) return 0;
   let score = 0;
@@ -281,8 +343,18 @@ function KeamananTab() {
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
+    if (score < 2 || form.next === form.current) {
+      setErrors({
+        next:
+          form.next === form.current
+            ? "Kata sandi baru harus berbeda dari kata sandi lama."
+            : "Gunakan kata sandi yang lebih kuat: minimal 8 karakter dengan huruf besar, angka, atau simbol.",
+      });
+      return;
+    }
+
     toast.push(
-      "Kata sandi belum diubah: layanan autentikasi belum dikonfigurasi untuk penyimpanan.",
+      "Pratinjau: kata sandi belum diubah. Penyimpanan kata sandi belum aktif pada mode demo.",
       "info",
     );
     setForm({ current: "", next: "", confirm: "" });
@@ -296,6 +368,11 @@ function KeamananTab() {
           Perbarui kata sandi secara berkala untuk melindungi akses data pembeli dan listing.
         </p>
       </div>
+
+      <InfoNotice title="Perubahan kata sandi belum tersimpan">
+        Akun pada mode demo memakai kata sandi tetap. Formulir ini menampilkan aturan dan
+        pratinjau; penyimpanan aktif setelah autentikasi Supabase disambungkan.
+      </InfoNotice>
 
       <form noValidate onSubmit={save} className="max-w-2xl space-y-4">
         <PropertyField

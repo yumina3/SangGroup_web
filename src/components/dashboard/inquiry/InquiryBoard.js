@@ -6,6 +6,14 @@ import ActionButton from "@/components/dashboard/ActionButton";
 import Modal from "@/components/dashboard/Modal";
 import StatusBadge from "@/components/dashboard/StatusBadge";
 import { useToast } from "@/components/dashboard/Toast";
+import {
+  FOLLOW_UP_NOTE_MAX,
+  isAllowedTransition,
+  RESCHEDULE_STATUS,
+  validateFollowUp,
+  waMessage,
+  waNumber,
+} from "@/lib/dashboard/inquiry-rules";
 import { formatRupiah, formatDateTime, formatLongDate } from "@/lib/dashboard/format";
 import { INQUIRY_STATUS, INQUIRY_TYPE, labelOf } from "@/lib/dashboard/status-labels";
 
@@ -15,13 +23,14 @@ import { INQUIRY_STATUS, INQUIRY_TYPE, labelOf } from "@/lib/dashboard/status-la
  * - Daftar memakai kartu, bukan tabel lebar, supaya nyaman di ponsel
  *   (SRS-D-07); di layar lebar kartu tersusun dua kolom.
  * - Tombol tindak lanjut hanya menampilkan transisi yang sah menurut matriks
- *   SRS §6.8 (`transitions` dikirim dari server).
- * - Tindak lanjut memerlukan catatan (SRS-F-SEL-10) dan menampilkan sisa
- *   karakter secara terlihat.
+ *   SRS §6.8 (`transitions` dikirim dari server) dan diverifikasi ulang dengan
+ *   `isAllowedTransition` sebelum dikirim.
+ * - Tindak lanjut memerlukan catatan (minimal 5 karakter) dan, untuk jadwal
+ *   ulang, tanggal kunjungan baru di masa depan.
  * - Karena penyimpanan belum tersambung, perubahan hanya dicatat di layar
  *   sebagai pratinjau dengan label jelas, bukan "berhasil" palsu.
  */
-export default function InquiryBoard({ items, properties, transitions, filterLabel }) {
+export default function InquiryBoard({ items, properties, transitions, filterLabel, focusId = null }) {
   const [drafts, setDrafts] = useState({});
   const [editing, setEditing] = useState(null);
 
@@ -49,13 +58,22 @@ export default function InquiryBoard({ items, properties, transitions, filterLab
           const status = draft ? draft.next : inquiry.status;
           const statusMeta = INQUIRY_STATUS[status] ?? INQUIRY_STATUS.PENDING;
           const typeMeta = INQUIRY_TYPE[inquiry.type] ?? INQUIRY_TYPE.VISIT;
-          const actions = transitions[inquiry.status] ?? [];
+          const actions = (transitions[inquiry.status] ?? []).filter((next) =>
+            isAllowedTransition(inquiry.status, next),
+          );
           const property = propertyById.get(inquiry.property.id);
+          const whatsapp = waNumber(inquiry.buyer.phone);
+          const highlighted = focusId === inquiry.id;
+          const note = draft ? draft.note : inquiry.sellerNote;
+          const scheduledAt = draft?.scheduledAt ?? inquiry.scheduledAt;
 
           return (
             <li
               key={inquiry.id}
-              className="flex flex-col rounded-dash border border-ag-line bg-white shadow-[0_1px_4px_rgba(0,0,0,0.03)]"
+              id={`pengajuan-${inquiry.id}`}
+              className={`flex flex-col rounded-dash border bg-white shadow-[0_1px_4px_rgba(0,0,0,0.03)] ${
+                highlighted ? "border-ag-gold-base ring-2 ring-ag-gold-base/30" : "border-ag-line"
+              }`}
             >
               <div className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-100 px-4 py-3">
                 <div className="min-w-0">
@@ -98,9 +116,9 @@ export default function InquiryBoard({ items, properties, transitions, filterLab
                   </p>
                 </div>
 
-                {inquiry.scheduledAt ? (
+                {scheduledAt ? (
                   <p className="rounded-tag bg-ag-surface-low px-2.5 py-1.5 text-[12px] font-medium text-ag-slate">
-                    Jadwal: {formatLongDate(inquiry.scheduledAt)}
+                    Jadwal: {formatLongDate(scheduledAt)}
                   </p>
                 ) : null}
 
@@ -110,9 +128,9 @@ export default function InquiryBoard({ items, properties, transitions, filterLab
                   </p>
                 ) : null}
 
-                {inquiry.sellerNote ? (
+                {note ? (
                   <p className="border-l-2 border-ag-gold/50 pl-2.5 text-[12px] italic leading-relaxed text-ag-slate-muted">
-                    Catatan Anda: {inquiry.sellerNote}
+                    {draft ? "Catatan pratinjau" : "Catatan Anda"}: {note}
                   </p>
                 ) : null}
 
@@ -129,15 +147,19 @@ export default function InquiryBoard({ items, properties, transitions, filterLab
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-ag-ivory-surface px-4 py-2.5">
-                <a
-                  href={`https://wa.me/${String(inquiry.buyer.phone).replace(/^\+/, "")}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[12.5px] font-semibold text-ag-forest hover:underline"
-                >
-                  Hubungi via WhatsApp
-                  <span className="sr-only"> — {inquiry.buyer.name}</span>
-                </a>
+                {whatsapp ? (
+                  <a
+                    href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(waMessage(inquiry))}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[12.5px] font-semibold text-ag-forest hover:underline"
+                  >
+                    Hubungi via WhatsApp
+                    <span className="sr-only"> — {inquiry.buyer.name}</span>
+                  </a>
+                ) : (
+                  <span className="text-[12px] text-ag-slate-muted">Nomor pembeli tidak tersedia</span>
+                )}
 
                 {actions.length > 0 ? (
                   <div className="flex flex-wrap items-center gap-1.5">
@@ -174,8 +196,6 @@ export default function InquiryBoard({ items, properties, transitions, filterLab
   );
 }
 
-const NOTE_MAX = 280;
-
 function placeholderFor(next) {
   if (next === "CONFIRMED") return "Konfirmasi jadwal dan apa yang perlu pembeli bawa.";
   if (next === "RESCHEDULED") return "Usulkan tanggal dan jam baru beserta alasannya.";
@@ -185,23 +205,27 @@ function placeholderFor(next) {
 
 function FollowUpDialog({ inquiry, next, onClose, onPreview }) {
   const [note, setNote] = useState(inquiry.sellerNote ?? "");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("09:00");
   const [error, setError] = useState("");
   const toast = useToast();
 
-  const trimmed = note.trim();
+  const needsSchedule = next === RESCHEDULE_STATUS;
+  const scheduledAt = needsSchedule && date ? `${date}T${time || "09:00"}:00+07:00` : null;
 
   function save() {
-    if (trimmed.length < 5) {
-      setError("Catatan minimal 5 karakter agar pembeli tahu alasannya.");
+    const result = validateFollowUp({ next, note, scheduledAt });
+    if (!result.ok) {
+      setError(result.message);
       return;
     }
 
-    onPreview({ next, note: trimmed });
+    onPreview({ next, note: result.note, scheduledAt });
     toast.push(
       `Pratinjau tersimpan di layar: status ${labelOf(INQUIRY_STATUS, inquiry.status)} → ${labelOf(
         INQUIRY_STATUS,
         next,
-      )}. Database pengajuan belum tersambung, jadi belum tercatat.`,
+      )}. Penyimpanan pengajuan belum aktif, jadi belum tercatat.`,
       "info",
     );
     onClose();
@@ -235,20 +259,53 @@ function FollowUpDialog({ inquiry, next, onClose, onPreview }) {
           Catatan ikut dikirim ke pembeli dan tercatat di log status pengajuan.
         </p>
 
+        {needsSchedule ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor="follow-up-date" className="mb-1 block text-[13px] font-semibold text-ag-slate">
+                Tanggal kunjungan baru
+              </label>
+              <input
+                id="follow-up-date"
+                type="date"
+                value={date}
+                onChange={(event) => {
+                  setDate(event.target.value);
+                  setError("");
+                }}
+                aria-invalid={error ? true : undefined}
+                className="h-10 w-full rounded-lg border border-ag-line bg-white px-3 text-[13px] text-ag-slate outline-none hover:border-ag-slate-muted focus:border-ag-gold-base"
+              />
+            </div>
+            <div>
+              <label htmlFor="follow-up-time" className="mb-1 block text-[13px] font-semibold text-ag-slate">
+                Jam
+              </label>
+              <input
+                id="follow-up-time"
+                type="time"
+                value={time}
+                onChange={(event) => setTime(event.target.value)}
+                className="h-10 w-full rounded-lg border border-ag-line bg-white px-3 text-[13px] text-ag-slate outline-none hover:border-ag-slate-muted focus:border-ag-gold-base"
+              />
+            </div>
+          </div>
+        ) : null}
+
         <div>
           <div className="mb-1 flex items-baseline justify-between gap-2">
             <label htmlFor="follow-up-note" className="text-[13px] font-semibold text-ag-slate">
               Catatan tindak lanjut
             </label>
             <span className="text-[11px] text-ag-slate-muted">
-              {note.length}/{NOTE_MAX}
+              {note.length}/{FOLLOW_UP_NOTE_MAX}
             </span>
           </div>
           <textarea
             id="follow-up-note"
             data-autofocus
             rows={4}
-            maxLength={NOTE_MAX}
+            maxLength={FOLLOW_UP_NOTE_MAX}
             value={note}
             onChange={(event) => {
               setNote(event.target.value);
@@ -264,7 +321,7 @@ function FollowUpDialog({ inquiry, next, onClose, onPreview }) {
             }`}
           />
           {error ? (
-            <p id="follow-up-note-error" className="mt-1 text-[11.5px] font-semibold text-red-600">
+            <p id="follow-up-note-error" role="alert" className="mt-1 text-[11.5px] font-semibold text-red-600">
               {error}
             </p>
           ) : null}

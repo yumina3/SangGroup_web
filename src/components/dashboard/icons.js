@@ -27,6 +27,26 @@ function Svg({ children, size = 20, className = "" }) {
   );
 }
 
+export function IconEye(props) {
+  return (
+    <Svg {...props}>
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </Svg>
+  );
+}
+
+export function IconEyeOff(props) {
+  return (
+    <Svg {...props}>
+      <path d="M3 3l18 18" />
+      <path d="M10.6 6a9.6 9.6 0 0 1 1.4-.1c6 0 9.5 6.1 9.5 6.1a17 17 0 0 1-2.9 3.6" />
+      <path d="M6.4 7.2A17 17 0 0 0 2.5 12S6 18.1 12 18.1c1.7 0 3.2-.4 4.5-1.1" />
+      <path d="M9.9 10a3 3 0 0 0 4.2 4.2" />
+    </Svg>
+  );
+}
+
 export function IconSearch(props) {
   return (
     <Svg {...props}>
@@ -222,6 +242,15 @@ export function IconHelp(props) {
   );
 }
 
+export function IconExit(props) {
+  return (
+    <Svg {...props}>
+      <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" />
+      <path d="M10 8l-4 4 4 4M6 12h9" />
+    </Svg>
+  );
+}
+
 export function IconSliders(props) {
   return (
     <Svg {...props}>
@@ -231,3 +260,85 @@ export function IconSliders(props) {
     </Svg>
   );
 }
+
+export function IconDownload(props) {
+  return (
+    <Svg {...props}>
+      <path d="M12 3v12" />
+      <path d="m7.5 10.5 4.5 4.5 4.5-4.5" />
+      <path d="M4 17v2.5A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5V17" />
+    </Svg>
+  );
+}
+
+export function IconList(props) {
+  return (
+    <Svg {...props}>
+      <path d="M9 6h11M9 12h11M9 18h11" />
+      <path d="M4 6h.01M4 12h.01M4 18h.01" />
+    </Svg>
+  );
+}
+
+export function IconArrowRight(props) {
+  return (
+    <Svg {...props}>
+      <path d="M4 12h16" />
+      <path d="m14 6 6 6-6 6" />
+    </Svg>
+  );
+}
+
+export function IconClock(props) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </Svg>
+  );
+}
+
+export function IconPhone(props) {
+  return (
+    <Svg {...props}>
+      <path d="M8.2 3.5 10 8l-2 1.8a13 13 0 0 0 6.2 6.2L16 14l4.5 1.8v3a2 2 0 0 1-2.2 2A17.5 17.5 0 0 1 2.2 4.7a2 2 0 0 1 2-2.2h3z" />
+    </Svg>
+  );
+}
+
+export function IconMail(props) {
+  return (
+    <Svg {...props}>
+      <rect x="3" y="5" width="18" height="14" rx="2.5" />
+      <path d="m4 7 8 6 8-6" />
+    </Svg>
+  );
+}
+
+export function IconCheckCircle(props) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="m8.5 12.2 2.4 2.4 4.6-5" />
+    </Svg>
+  );
+}
+
+export function IconBan(props) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="m6 18 12-12" />
+    </Svg>
+  );
+}
+
+export function IconFileText(props) {
+  return (
+    <Svg {...props}>
+      <path d="M6 3.5h7l5 5V20a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 20z" />
+      <path d="M13 3.5v5h5M9 13h6M9 17h4" />
+    </Svg>
+  );
+}
+

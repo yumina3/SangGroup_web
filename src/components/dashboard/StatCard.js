@@ -5,6 +5,7 @@
 const ICON_TONE = {
   forest: "bg-[#e7f0eb] text-ag-forest",
   warning: "bg-amber-50 text-amber-600",
+  danger: "bg-red-50 text-red-600",
   info: "bg-blue-50 text-blue-600",
   neutral: "bg-slate-100 text-slate-600",
 };

@@ -17,6 +17,9 @@ const requiredText = (label, min, max) =>
     .min(min, { error: `${label} wajib diisi` })
     .max(max, { error: `${label} maksimal ${max} karakter` });
 
+/** Kategori listing yang boleh dipilih penjual (sama dengan isian form). */
+export const PROPERTY_CATEGORIES = ["Rumah", "Ruko", "Kavling", "Apartemen"];
+
 const numeric = (label, { min, max, integer = true }) =>
   z
     .string()
@@ -35,7 +38,7 @@ const numeric = (label, { min, max, integer = true }) =>
 
 export const propertyFormSchema = z.object({
   title: requiredText("Nama properti", 5, 120),
-  category: requiredText("Kategori", 2, 40),
+  category: z.enum(PROPERTY_CATEGORIES, { error: "Pilih kategori yang tersedia" }),
   cluster: requiredText("Perumahan / cluster", 2, 80),
   unit: requiredText("Nomor kavling / unit", 1, 30),
   description: z
@@ -55,9 +58,13 @@ export const propertyFormSchema = z.object({
 });
 
 /**
- * Validasi tambahan di luar skema: harga harus > 0 (database memakai
- * CHECK harga > 0) dan koordinat tidak boleh 0,0 yang berarti titik kosong.
+ * Validasi tambahan di luar skema:
+ * - harga harus > 0 dan ≤ Rp50 miliar (batas wajar listing perumahan, juga
+ *   menjaga angka rupiah tetap aman untuk perhitungan summary);
+ * - koordinat 0,0 ditolak karena berarti titik peta belum dipilih.
  */
+const MAX_PRICE = 50_000_000_000;
+
 export function validatePropertyForm(raw, { submission = "PENDING" } = {}) {
   const parsed = propertyFormSchema.safeParse(raw);
   /** @type {Record<string,string>} */
@@ -75,6 +82,8 @@ export function validatePropertyForm(raw, { submission = "PENDING" } = {}) {
   const price = Number(raw.price);
   if (!fieldErrors.price && (!Number.isFinite(price) || price <= 0)) {
     fieldErrors.price = "Harga harus lebih besar dari 0";
+  } else if (!fieldErrors.price && price > MAX_PRICE) {
+    fieldErrors.price = "Harga maksimal Rp50.000.000.000";
   }
 
   if (
@@ -102,3 +111,28 @@ export function validatePropertyForm(raw, { submission = "PENDING" } = {}) {
 
 /** Field yang mengembalikan listing VERIFIED ke PENDING (SRS-F-SEL-08). */
 export const KEY_FIELDS = ["price", "latitude", "longitude", "address"];
+
+/** Field kunci mana saja yang berubah dibanding properti tersimpan. */
+export function changedKeyFields(property, form) {
+  if (!property) return [];
+  return KEY_FIELDS.filter((key) => String(property?.[key] ?? "") !== String(form?.[key] ?? ""));
+}
+
+/**
+ * Aturan per status listing (SRS-F-SEL-03 s.d. SEL-08):
+ * - DRAFT     : boleh disimpan sebagai draft atau dikirim untuk verifikasi.
+ * - REJECTED  : perbaiki data lalu kirim ulang untuk verifikasi.
+ * - PENDING   : admin sedang memeriksa; edit dikunci agar antrean tidak berubah.
+ * - VERIFIED  : boleh diubah; perubahan field kunci mengirim ulang ke verifikasi.
+ * - HIDDEN    : hanya bisa dikirim untuk verifikasi ulang.
+ */
+export const EDITABLE_LISTING_STATUSES = ["DRAFT", "REJECTED", "VERIFIED", "HIDDEN"];
+
+export function submissionOptions(listingStatus) {
+  const status = listingStatus ?? "DRAFT";
+  return {
+    draft: status === "DRAFT",
+    verify: EDITABLE_LISTING_STATUSES.includes(status),
+    locked: status === "PENDING",
+  };
+}

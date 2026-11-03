@@ -16,6 +16,8 @@ export default function Field({
   required = false,
   placeholder,
   defaultValue,
+  value,
+  onChange,
 }) {
   const generatedId = useId();
   const id = `${name}-${generatedId}`;
@@ -25,6 +27,8 @@ export default function Field({
   const describedBy =
     [error ? errorId : null, hint ? hintId : null].filter(Boolean).join(" ") ||
     undefined;
+
+  const controlled = value !== undefined && onChange !== undefined;
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -45,7 +49,9 @@ export default function Field({
         required={required}
         autoComplete={autoComplete}
         placeholder={placeholder}
-        defaultValue={defaultValue}
+        {...(controlled
+          ? { value, onChange: (event) => onChange(event.target.value) }
+          : { defaultValue })}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
         className={[
