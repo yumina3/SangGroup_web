@@ -3,8 +3,8 @@ import { formatDateTime } from "@/lib/dashboard/format";
 /**
  * Panel hijau "kunjungan terdekat" (FR-SEL-04 sisi penjual).
  * Tombol simpul menuju halaman yang mengerjakannya: pengajuan masuk dan
- * detail properti. Ajakan menghubungi pembeli memakai tautan WhatsApp yang
- * memang tersedia — halaman pesan/obrolan tidak dibangun (SRS §3.5).
+ * detail properti. Ajakan menghubungi pembeli memakai tautan WhatsApp;
+ * percakapan lanjutan tersedia di halaman Pesan.
  */
 export default function UpcomingVisitCard({ visit }) {
   if (!visit) {
