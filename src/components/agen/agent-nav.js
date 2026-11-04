@@ -20,7 +20,8 @@ import {
  * Status sebuah rute dashboard.
  *
  * - "ready"      : halaman sudah dibangun — termasuk halaman pengembangan
- *                  lanjutan SRS §3.5 seperti Deals/Pipeline dan Tugas.
+ *                  lanjutan SRS §3.5 seperti Deals/Pipeline, Tugas, Kontak,
+ *                  dan Pesan.
  * - "later"      : halaman ada di SRS §4 tetapi modulnya dikerjakan terpisah.
  * - "outOfScope" : layar ada di docs/agen tetapi SRS §3.5 menyatakan tidak
  *                  dibangun, jadi menu hanya ditampilkan dengan keterangan
@@ -77,8 +78,18 @@ export const AGENT_NAV_GROUPS = [
         status: NAV_STATUS.ready,
         icon: IconCheckSquare,
       },
-      { label: "Kontak", href: null, status: NAV_STATUS.outOfScope, icon: IconUsers },
-      { label: "Pesan", href: null, status: NAV_STATUS.outOfScope, icon: IconMessage },
+      {
+        label: "Kontak",
+        href: "/dashboard/penjual/kontak",
+        status: NAV_STATUS.ready,
+        icon: IconUsers,
+      },
+      {
+        label: "Pesan",
+        href: "/dashboard/penjual/pesan",
+        status: NAV_STATUS.ready,
+        icon: IconMessage,
+      },
     ],
   },
   {

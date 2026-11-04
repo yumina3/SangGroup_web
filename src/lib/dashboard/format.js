@@ -58,16 +58,10 @@ export function formatDate(value) {
   }).format(date);
 }
 
-/** "28 Okt 2026 · 09.30 WIB" */
-export function formatDateTime(value) {
+/** "09.30 WIB" */
+export function formatTime(value) {
   const date = toDate(value);
   if (!date) return "—";
-  const day = new Intl.DateTimeFormat("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: ZONE,
-  }).format(date);
   const time = new Intl.DateTimeFormat("id-ID", {
     hour: "2-digit",
     minute: "2-digit",
@@ -76,7 +70,14 @@ export function formatDateTime(value) {
   })
     .format(date)
     .replace(":", ".");
-  return `${day} · ${time} WIB`;
+  return `${time} WIB`;
+}
+
+/** "28 Okt 2026 · 09.30 WIB" */
+export function formatDateTime(value) {
+  const date = toDate(value);
+  if (!date) return "—";
+  return `${formatDate(date)} · ${formatTime(date)}`;
 }
 
 /** "Rabu, 28 Oktober 2026" — dipakai di kepala halaman. */

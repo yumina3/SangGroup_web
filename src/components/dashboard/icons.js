@@ -342,3 +342,56 @@ export function IconFileText(props) {
   );
 }
 
+export function IconArrowLeft(props) {
+  return (
+    <Svg {...props}>
+      <path d="M20 12H4" />
+      <path d="m10 18-6-6 6-6" />
+    </Svg>
+  );
+}
+
+export function IconSend(props) {
+  return (
+    <Svg {...props}>
+      <path d="M21 3 3 10.5l7 2.5 2.5 7z" />
+      <path d="M10 13 21 3" />
+    </Svg>
+  );
+}
+
+export function IconPaperclip(props) {
+  return (
+    <Svg {...props}>
+      <path d="M20.5 11.5 12 20a6 6 0 0 1-8.5-8.5l8-8a4 4 0 0 1 5.7 5.7l-8 8a2 2 0 0 1-2.8-2.8l7.6-7.6" />
+    </Svg>
+  );
+}
+
+export function IconCheck(props) {
+  return (
+    <Svg {...props}>
+      <path d="m5 12.5 4.5 4.5L19 7" />
+    </Svg>
+  );
+}
+
+export function IconCheckDouble(props) {
+  return (
+    <Svg {...props}>
+      <path d="m2.5 12.5 4.5 4.5L16.5 7" />
+      <path d="m11.5 15.5 1.5 1.5L22.5 7" />
+    </Svg>
+  );
+}
+
+export function IconMoreVertical(props) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="5" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="19" r="1.2" fill="currentColor" stroke="none" />
+    </Svg>
+  );
+}
+
