@@ -2,20 +2,34 @@
   "name": "sang_group",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:generate": "prisma generate --config prisma7.config.ts",
+    "db:migrate": "prisma migrate deploy --config prisma7.config.ts",
+    "db:seed": "node prisma/seed.mts",
+    "db:studio": "prisma studio --config prisma7.config.ts",
+    "worker": "node worker/index.mts",
+    "notifications:requeue": "node scripts/requeue-pending.mts",
+    "test": "node tests/validators.test.mjs && node tests/transitions.test.mjs"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
-    "@supabase/supabase-js": "^2.118.0",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.119.0",
+    "bullmq": "^5.34.0",
+    "ioredis": "^5.4.0",
     "leaflet": "^1.9.4",
     "next": "16.4.3",
     "pino": "^10.4.0",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "web-push": "^3.6.7",
+    "zod": "^4.1.0"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",

@@ -11,7 +11,8 @@ import {
   paginate,
   parsePropertyQuery,
 } from "@/lib/dashboard/agent-filters";
-import { getAgentDashboard } from "@/lib/dashboard/agent-data";
+import { requirePageUser } from "@/lib/auth/current-user";
+import { getAgentDashboard } from "@/lib/services/properties";
 import { formatNumber } from "@/lib/dashboard/format";
 
 export const metadata = { title: "Properti Saya" };
@@ -46,7 +47,8 @@ export default function AgentPropertiesPage({ searchParams }) {
 async function PropertyListSection({ searchParams }) {
   const params = (await searchParams) ?? {};
   const query = parsePropertyQuery(params);
-  const { properties } = getAgentDashboard();
+  const user = await requirePageUser(["agent"]);
+  const { properties } = await getAgentDashboard(user.id);
 
   const filtered = filterProperties(properties, query);
   const result = paginate(filtered, query.page);

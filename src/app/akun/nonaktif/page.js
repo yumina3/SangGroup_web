@@ -52,12 +52,12 @@ export default function AkunNonaktifPage({ searchParams }) {
           >
             Kembali ke halaman masuk
           </Link>
-          <a
+          <Link
             href="/"
             className="font-semibold text-muted underline underline-offset-2"
           >
             Ke beranda
-          </a>
+          </Link>
         </div>
       </div>
     </main>

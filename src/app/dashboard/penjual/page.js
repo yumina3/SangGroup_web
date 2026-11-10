@@ -11,8 +11,9 @@ import { EmptyState } from "@/components/dashboard/States";
 import StatGrid from "@/components/dashboard/StatGrid";
 import { HeaderSkeleton, PanelSkeleton, StatGridSkeleton } from "@/components/dashboard/Skeletons";
 import UpcomingVisitCard from "@/components/dashboard/UpcomingVisitCard";
-import { getAgentDashboard } from "@/lib/dashboard/agent-data";
+import { requirePageUser } from "@/lib/auth/current-user";
 import { latestRejected, recentInquiries, summarize } from "@/lib/dashboard/agent-metrics";
+import { getAgentDashboard } from "@/lib/services/properties";
 import { formatLongDate } from "@/lib/dashboard/format";
 
 export const metadata = { title: "Ringkasan Agen" };
@@ -40,8 +41,9 @@ export default function AgentOverviewPage() {
 async function OverviewContent() {
   await connection();
 
+  const user = await requirePageUser(["agent"]);
   const now = new Date();
-  const { agent, properties, inquiries } = getAgentDashboard();
+  const { agent, properties, inquiries } = await getAgentDashboard(user.id);
   const summary = summarize(properties, inquiries, now);
   const rejected = latestRejected(properties);
   const recent = recentInquiries(inquiries, 5);

@@ -17,6 +17,7 @@ export default function RegisterForm() {
   return (
     <form action={formAction} className="flex flex-col gap-4" noValidate>
       {state?.formError ? <Alert tone="danger">{state.formError}</Alert> : null}
+      {state?.success ? <Alert tone="success">{state.success}</Alert> : null}
 
       <Field
         label="Nama lengkap"

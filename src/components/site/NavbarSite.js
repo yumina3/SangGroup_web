@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 /**
@@ -59,7 +60,7 @@ export default function NavbarSite() {
       {/* ---- Tier 1: identitas brand ---- */}
       <header className="w-full bg-white px-6 py-4">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-center">
-          <a
+          <Link
             href="/"
             className="inline-flex items-center leading-none"
             aria-label="Sang Group — beranda"
@@ -71,7 +72,7 @@ export default function NavbarSite() {
             <span className="font-serif text-3xl font-bold italic tracking-tight text-[#C5A059] md:text-4xl">
               Group
             </span>
-          </a>
+          </Link>
           <p className="mt-1 text-center font-sans text-[9px] font-semibold uppercase tracking-[0.3em] text-gray-500 md:text-[10px]">
             Residential &amp; Lifestyle Community
           </p>

@@ -2,30 +2,23 @@ import {
   IconBadge,
   IconBuilding,
   IconChart,
-  IconCheckSquare,
   IconFunnel,
   IconHelp,
   IconHome,
   IconInbox,
-  IconKanban,
   IconMap,
-  IconMessage,
   IconPlug,
   IconSettings,
   IconSliders,
-  IconUsers,
 } from "@/components/dashboard/icons";
 
 /**
  * Status sebuah rute dashboard.
  *
- * - "ready"      : halaman sudah dibangun — termasuk halaman pengembangan
- *                  lanjutan SRS §3.5 seperti Deals/Pipeline, Tugas, Kontak,
- *                  dan Pesan.
- * - "later"      : halaman ada di SRS §4 tetapi modulnya dikerjakan terpisah.
- * - "outOfScope" : layar ada di docs/agen tetapi SRS §3.5 menyatakan tidak
- *                  dibangun, jadi menu hanya ditampilkan dengan keterangan
- *                  "Segera" dan tidak bisa diklik.
+ * - "ready"      : halaman sudah dibangun dan sesuai SRS §3.6.
+ * - "later"      : halaman ada di SRS tetapi modulnya dikerjakan terpisah.
+ * - "outOfScope" : layar di luar lingkup SRS; menu ditampilkan dengan
+ *                  keterangan "Segera" dan tidak bisa diklik.
  */
 export const NAV_STATUS = {
   ready: "ready",
@@ -65,30 +58,6 @@ export const AGENT_NAV_GROUPS = [
         href: "/dashboard/penjual/pengajuan",
         status: NAV_STATUS.ready,
         icon: IconInbox,
-      },
-      {
-        label: "Deals / Pipeline",
-        href: "/dashboard/penjual/deals",
-        status: NAV_STATUS.ready,
-        icon: IconKanban,
-      },
-      {
-        label: "Tugas Tindak Lanjut",
-        href: "/dashboard/penjual/tugas",
-        status: NAV_STATUS.ready,
-        icon: IconCheckSquare,
-      },
-      {
-        label: "Kontak",
-        href: "/dashboard/penjual/kontak",
-        status: NAV_STATUS.ready,
-        icon: IconUsers,
-      },
-      {
-        label: "Pesan",
-        href: "/dashboard/penjual/pesan",
-        status: NAV_STATUS.ready,
-        icon: IconMessage,
       },
     ],
   },

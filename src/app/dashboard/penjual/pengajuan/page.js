@@ -5,7 +5,8 @@ import { connection } from "next/server";
 import InfoNotice from "@/components/dashboard/InfoNotice";
 import InquiryBoard from "@/components/dashboard/inquiry/InquiryBoard";
 import PageHeader from "@/components/dashboard/PageHeader";
-import { getAgentDashboard } from "@/lib/dashboard/agent-data";
+import { requirePageUser } from "@/lib/auth/current-user";
+import { getAgentDashboard } from "@/lib/services/properties";
 import {
   filterInquiries,
   parseInquiryQuery,
@@ -57,7 +58,8 @@ async function InquiriesContent({ searchParams }) {
   const query = parseInquiryQuery(params);
   const focusId = typeof params.id === "string" ? params.id : null;
 
-  const { properties, inquiries } = getAgentDashboard();
+  const user = await requirePageUser(["agent"]);
+  const { properties, inquiries } = await getAgentDashboard(user.id);
   const filtered = [...filterInquiries(inquiries, query)].sort(
     (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
   );

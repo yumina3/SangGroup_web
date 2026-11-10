@@ -1,19 +1,24 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { consume, reset, RATE_LIMITS } from "@/lib/auth/rate-limit";
-import {
-  PENJUAL_COOKIE,
-  PENJUAL_SESSION_MAX_AGE,
-  authenticatePenjual,
-  serializePenjualSession,
-} from "@/lib/auth/penjual-session";
-import { loginSchema, formDataToObject, toFieldErrors } from "@/lib/validators/auth";
+import { getDb } from "@/lib/db/client";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { formDataToObject, loginSchema, toFieldErrors } from "@/lib/validators/auth";
 
-const REDIRECT_DASHBOARD = "/dashboard/penjual";
+const HOME_BY_ROLE = {
+  agent: "/dashboard/penjual",
+  admin: "/admin",
+  buyer: "/akun",
+};
 
+/**
+ * Login memakai Supabase Auth (BR-03, FR-20).
+ *
+ * Peran dibaca dari tabel profiles, bukan dari form. Akun nonaktif langsung
+ * di-sign-out agar tidak meninggalkan sesi setengah jadi.
+ */
 export async function penjualLoginAction(_prevState, formData) {
   const raw = formDataToObject(formData, ["email", "password"]);
   const parsed = loginSchema.safeParse(raw);
@@ -21,7 +26,8 @@ export async function penjualLoginAction(_prevState, formData) {
     return { ok: false, formError: null, fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const limit = consume(`penjual-login:${parsed.data.email}`, RATE_LIMITS.login);
+  const key = `login:${parsed.data.email}`;
+  const limit = consume(key, RATE_LIMITS.login);
   if (!limit.ok) {
     return {
       ok: false,
@@ -30,33 +36,59 @@ export async function penjualLoginAction(_prevState, formData) {
     };
   }
 
-  const auth = authenticatePenjual(parsed.data.email, parsed.data.password);
-  if (!auth.ok) {
-    return { ok: false, formError: auth.message, fieldErrors: {} };
+  let supabase;
+  try {
+    supabase = await createSupabaseServerClient();
+  } catch {
+    return {
+      ok: false,
+      formError:
+        "Supabase belum dikonfigurasi. Isi NEXT_PUBLIC_SUPABASE_URL dan NEXT_PUBLIC_SUPABASE_ANON_KEY di .env.",
+      fieldErrors: {},
+    };
   }
 
-  // Sesi demo + limit direset setelah login sukses.
-  const email = parsed.data.email.trim().toLowerCase();
-  const store = await cookies();
-  store.set(
-    PENJUAL_COOKIE,
-    serializePenjualSession({ email, expiresAt: Date.now() + PENJUAL_SESSION_MAX_AGE * 1000 }),
-    {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: PENJUAL_SESSION_MAX_AGE,
-      path: "/",
-    },
-  );
-  reset(`penjual-login:${email}`);
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: parsed.data.email,
+    password: parsed.data.password,
+  });
 
-  redirect(REDIRECT_DASHBOARD, "push");
+  if (error || !data.user) {
+    return {
+      ok: false,
+      formError: "Email atau kata sandi tidak sesuai. Periksa kembali.",
+      fieldErrors: {},
+    };
+  }
+
+  const profile = await getDb().profile.findUnique({
+    where: { id: data.user.id },
+    select: { role: true, isActive: true },
+  });
+
+  if (!profile || !profile.isActive) {
+    await supabase.auth.signOut();
+    return {
+      ok: false,
+      formError: "Akun ini dinonaktifkan. Hubungi admin SANG Group.",
+      fieldErrors: {},
+    };
+  }
+
+  reset(key);
+  redirect(HOME_BY_ROLE[profile.role] ?? "/");
 }
 
-/** Keluar: hapus cookie sesi, lalu kembali ke gerbang /penjual. */
+/** Logout dari mana pun. */
+export async function logoutAction() {
+  const supabase = await createSupabaseServerClient();
+  await supabase.auth.signOut();
+  redirect("/");
+}
+
+/** Logout dari area agen, kembali ke gerbang login. */
 export async function penjualLogoutAction() {
-  const store = await cookies();
-  store.delete(PENJUAL_COOKIE);
-  redirect("/penjual", "push");
+  const supabase = await createSupabaseServerClient();
+  await supabase.auth.signOut();
+  redirect("/penjual");
 }

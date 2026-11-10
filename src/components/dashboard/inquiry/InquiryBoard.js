@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
+import { respondInquiryAction } from "@/app/dashboard/penjual/pengajuan/actions";
 import ActionButton from "@/components/dashboard/ActionButton";
 import Modal from "@/components/dashboard/Modal";
 import StatusBadge from "@/components/dashboard/StatusBadge";
@@ -31,7 +33,6 @@ import { INQUIRY_STATUS, INQUIRY_TYPE, labelOf } from "@/lib/dashboard/status-la
  *   sebagai pratinjau dengan label jelas, bukan "berhasil" palsu.
  */
 export default function InquiryBoard({ items, properties, transitions, filterLabel, focusId = null }) {
-  const [drafts, setDrafts] = useState({});
   const [editing, setEditing] = useState(null);
 
   const propertyById = new Map(properties.map((item) => [item.id, item]));
@@ -54,8 +55,7 @@ export default function InquiryBoard({ items, properties, transitions, filterLab
     <>
       <ul className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
         {items.map((inquiry) => {
-          const draft = drafts[inquiry.id];
-          const status = draft ? draft.next : inquiry.status;
+          const status = inquiry.status;
           const statusMeta = INQUIRY_STATUS[status] ?? INQUIRY_STATUS.PENDING;
           const typeMeta = INQUIRY_TYPE[inquiry.type] ?? INQUIRY_TYPE.VISIT;
           const actions = (transitions[inquiry.status] ?? []).filter((next) =>
@@ -64,8 +64,8 @@ export default function InquiryBoard({ items, properties, transitions, filterLab
           const property = propertyById.get(inquiry.property.id);
           const whatsapp = waNumber(inquiry.buyer.phone);
           const highlighted = focusId === inquiry.id;
-          const note = draft ? draft.note : inquiry.sellerNote;
-          const scheduledAt = draft?.scheduledAt ?? inquiry.scheduledAt;
+          const note = inquiry.sellerNote;
+          const scheduledAt = inquiry.scheduledAt;
 
           return (
             <li
@@ -130,18 +130,7 @@ export default function InquiryBoard({ items, properties, transitions, filterLab
 
                 {note ? (
                   <p className="border-l-2 border-ag-gold/50 pl-2.5 text-[12px] italic leading-relaxed text-ag-slate-muted">
-                    {draft ? "Catatan pratinjau" : "Catatan Anda"}: {note}
-                  </p>
-                ) : null}
-
-                {draft ? (
-                  <p
-                    role="status"
-                    className="rounded-tag border border-ag-gold/30 bg-ag-gold/10 px-2.5 py-2 text-[12px] leading-relaxed text-[#7a5c1a]"
-                  >
-                    Pratinjau (belum tersimpan): status akan menjadi{" "}
-                    <strong className="font-semibold">{labelOf(INQUIRY_STATUS, draft.next)}</strong>{" "}
-                    dengan catatan “{draft.note}”.
+                    Catatan Anda: {note}
                   </p>
                 ) : null}
               </div>
@@ -189,7 +178,6 @@ export default function InquiryBoard({ items, properties, transitions, filterLab
           inquiry={editing.inquiry}
           next={editing.next}
           onClose={() => setEditing(null)}
-          onPreview={(draft) => setDrafts((current) => ({ ...current, [editing.inquiry.id]: draft }))}
         />
       ) : null}
     </>
@@ -203,32 +191,53 @@ function placeholderFor(next) {
   return "Ringkas hasil kunjungan atau kesepakatan dengan pembeli.";
 }
 
-function FollowUpDialog({ inquiry, next, onClose, onPreview }) {
+function FollowUpDialog({ inquiry, next, onClose }) {
   const [note, setNote] = useState(inquiry.sellerNote ?? "");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("09:00");
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   const toast = useToast();
+  const router = useRouter();
 
   const needsSchedule = next === RESCHEDULE_STATUS;
   const scheduledAt = needsSchedule && date ? `${date}T${time || "09:00"}:00+07:00` : null;
 
-  function save() {
+  async function save() {
     const result = validateFollowUp({ next, note, scheduledAt });
     if (!result.ok) {
       setError(result.message);
       return;
     }
 
-    onPreview({ next, note: result.note, scheduledAt });
+    setSaving(true);
+    setError("");
+
+    const response = await respondInquiryAction({
+      inquiryId: inquiry.id,
+      next,
+      note: result.note,
+      scheduledAt,
+    });
+
+    setSaving(false);
+
+    if (!response.ok) {
+      setError(
+        response.formError ??
+          response.fieldErrors?.note ??
+          response.fieldErrors?.scheduledAt ??
+          "Tindak lanjut gagal disimpan.",
+      );
+      return;
+    }
+
     toast.push(
-      `Pratinjau tersimpan di layar: status ${labelOf(INQUIRY_STATUS, inquiry.status)} → ${labelOf(
-        INQUIRY_STATUS,
-        next,
-      )}. Penyimpanan pengajuan belum aktif, jadi belum tercatat.`,
-      "info",
+      `Status pengajuan diperbarui menjadi ${labelOf(INQUIRY_STATUS, next)}. Pembeli menerima notifikasi.`,
+      "success",
     );
     onClose();
+    router.refresh();
   }
 
   return (
@@ -242,7 +251,7 @@ function FollowUpDialog({ inquiry, next, onClose, onPreview }) {
           <ActionButton variant="outline" size="md" onClick={onClose}>
             Batal
           </ActionButton>
-          <ActionButton variant="primary" size="md" onClick={save}>
+          <ActionButton variant="primary" size="md" onClick={save} pending={saving}>
             Simpan tindak lanjut
           </ActionButton>
         </>

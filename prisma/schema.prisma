@@ -7,9 +7,8 @@ datasource db {
   provider = "postgresql"
 }
 
-// --- Modul identity -----------------------------------------------------
-// Hanya tabel yang dibutuhkan autentikasi. Tabel bisnis lain (properties,
-// inquiries, dst.) dibuat modulnya masing-masing.
+// Skema mengikuti SRS §7 (Rancangan Entitas Data).
+// profiles.id = auth.users.id (Supabase Auth). Tabel auth.* dikelola Supabase.
 
 enum UserRole {
   buyer
@@ -17,41 +16,263 @@ enum UserRole {
   admin
 }
 
-enum UserStatus {
-  pending
-  active
-  inactive
+enum BusinessStatus {
+  tersedia
+  dipesan
+  terjual
 }
 
-/// Profil aplikasi. `id` sama dengan `auth.users.id` pada Supabase Auth.
-model Profile {
-  id         String     @id
-  fullName   String     @map("full_name")
-  email      String     @unique
-  phone      String
-  role       UserRole   @default(buyer)
-  status     UserStatus @default(active)
-  agencyName String?    @map("agency_name")
-  avatarPath String?    @map("avatar_path")
-  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt  DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+enum VerificationStatus {
+  pending
+  approved
+  rejected
+}
 
-  authEvents AuthEvent[]
+enum InquiryType {
+  kunjungan
+  minat_beli
+}
+
+enum InquiryStatus {
+  menunggu
+  dihubungi
+  kunjungan_dijadwalkan
+  selesai
+  dibatalkan
+  ditolak
+}
+
+enum NotificationStatus {
+  pending
+  sent
+  failed
+  skipped
+}
+
+/// Profil aplikasi. Dibuat otomatis oleh trigger `handle_new_user` saat
+/// pengguna mendaftar lewat Supabase Auth; `id` sama dengan auth.users.id.
+model Profile {
+  id        String   @id @db.Uuid
+  fullName  String   @map("full_name")
+  phone     String?
+  role      UserRole @default(buyer)
+  /// Dinonaktifkan admin; pengguna tidak bisa login efektif.
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  properties        Property[]        @relation("PropertyOwner")
+  verifiedListings  Property[]        @relation("PropertyVerifier")
+  favorites         Favorite[]
+  inquiries         PropertyInquiry[] @relation("InquiryBuyer")
+  inquiryUpdates    InquiryUpdate[]   @relation("InquiryActor")
+  pushSubscriptions PushSubscription[]
+  notifications     Notification[]
 
   @@map("profiles")
 }
 
-/// Jejak audit autentikasi. Tidak pernah menyimpan kata sandi atau token.
-model AuthEvent {
-  id        String   @id @default(uuid())
-  userId    String?  @map("user_id")
-  action    String
-  detail    Json?
+/// Proyek perumahan: Sang Dipa, Sang Wira, Sang Naya.
+model Project {
+  id             String    @id @default(uuid()) @db.Uuid
+  name           String
+  slug           String    @unique
+  description    String    @default("")
+  address        String    @default("")
+  latitude       Decimal?  @db.Decimal(9, 6)
+  longitude      Decimal?  @db.Decimal(9, 6)
+  coverImagePath String?   @map("cover_image_path")
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  properties Property[]
+  sitePlans  SitePlan[]
+
+  @@index([isActive])
+  @@map("projects")
+}
+
+/// Kategori/tipe properti yang dikelola admin.
+model PropertyCategory {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String   @unique
+  isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  profile Profile? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  properties Property[]
 
-  @@index([userId])
-  @@index([createdAt])
-  @@map("auth_events")
+  @@index([isActive])
+  @@map("property_categories")
+}
+
+/// Listing properti.
+model Property {
+  id                 String             @id @default(uuid()) @db.Uuid
+  projectId          String             @map("project_id") @db.Uuid
+  ownerId            String             @map("owner_id") @db.Uuid
+  categoryId         String             @map("category_id") @db.Uuid
+  slug               String             @unique
+  title              String
+  description        String             @default("")
+  /// Rupiah utuh (BigInt karena harga properti melewati batas Int32).
+  price              BigInt
+  landArea           Int                @map("land_area")
+  buildingArea       Int                @map("building_area")
+  bedrooms           Int                @default(0)
+  bathrooms          Int                @default(0)
+  address            String
+  /// Boleh null: listing tanpa koordinat tidak menghasilkan marker.
+  latitude           Decimal?           @db.Decimal(9, 6)
+  longitude          Decimal?           @db.Decimal(9, 6)
+  businessStatus     BusinessStatus     @default(tersedia) @map("business_status")
+  verificationStatus VerificationStatus @default(pending) @map("verification_status")
+  /// Catatan penolakan/perbaikan dari admin (BR-20).
+  verificationNote   String?            @map("verification_note")
+  verifiedById       String?            @map("verified_by") @db.Uuid
+  verifiedAt         DateTime?          @map("verified_at") @db.Timestamptz(3)
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  project   Project          @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  owner     Profile          @relation("PropertyOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  category  PropertyCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  verifier  Profile?         @relation("PropertyVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
+  images    PropertyImage[]
+  favorites Favorite[]
+  inquiries PropertyInquiry[]
+
+  @@index([projectId, verificationStatus])
+  @@index([ownerId, verificationStatus])
+  @@index([verificationStatus, businessStatus])
+  @@index([categoryId])
+  @@map("properties")
+}
+
+/// Foto properti. Berkas fisik di Supabase Storage; tabel hanya path.
+model PropertyImage {
+  id          String   @id @default(uuid()) @db.Uuid
+  propertyId  String   @map("property_id") @db.Uuid
+  storagePath String   @map("storage_path")
+  altText     String   @default("") @map("alt_text")
+  sortOrder   Int      @map("sort_order")
+  isPrimary   Boolean  @default(false) @map("is_primary")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, sortOrder])
+  @@index([propertyId])
+  @@map("property_images")
+}
+
+/// Favorit pembeli. Unik per pembeli+listing (FR-26).
+model Favorite {
+  id         String   @id @default(uuid()) @db.Uuid
+  buyerId    String   @map("buyer_id") @db.Uuid
+  propertyId String   @map("property_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  buyer    Profile  @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([buyerId, propertyId])
+  @@index([buyerId, createdAt])
+  @@map("favorites")
+}
+
+/// Pengajuan kunjungan/minat beli (FR-27).
+model PropertyInquiry {
+  id          String        @id @default(uuid()) @db.Uuid
+  buyerId     String        @map("buyer_id") @db.Uuid
+  propertyId  String        @map("property_id") @db.Uuid
+  inquiryType InquiryType   @map("inquiry_type")
+  message     String?
+  status      InquiryStatus @default(menunggu)
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  buyer    Profile         @relation("InquiryBuyer", fields: [buyerId], references: [id], onDelete: Restrict)
+  property Property        @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  updates  InquiryUpdate[]
+
+  @@index([propertyId, status])
+  @@index([buyerId, createdAt])
+  @@index([status, createdAt])
+  @@map("property_inquiries")
+}
+
+/// Riwayat tindak lanjut pengajuan (SRS §7, opsional tetapi dipakai audit).
+model InquiryUpdate {
+  id         String         @id @default(uuid()) @db.Uuid
+  inquiryId  String         @map("inquiry_id") @db.Uuid
+  actorId    String?        @map("actor_id") @db.Uuid
+  oldStatus  InquiryStatus? @map("old_status")
+  newStatus  InquiryStatus @map("new_status")
+  note       String?
+  createdAt  DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  inquiry PropertyInquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  actor   Profile?        @relation("InquiryActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([inquiryId, createdAt])
+  @@map("inquiry_updates")
+}
+
+/// Site plan proyek (opsional; hanya dipakai jika tersedia dan diizinkan).
+model SitePlan {
+  id             String   @id @default(uuid()) @db.Uuid
+  projectId      String   @map("project_id") @db.Uuid
+  filePath       String   @map("file_path")
+  version        String   @default("1")
+  approvedForUse Boolean  @default(false) @map("approved_for_use")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, approvedForUse])
+  @@map("site_plans")
+}
+
+// --- Web Push (kebutuhan Technical Requirements) -------------------------
+
+model PushSubscription {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  endpoint      String    @unique
+  p256dh        String
+  auth          String
+  userAgent     String?   @map("user_agent")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastSuccessAt DateTime? @map("last_success_at") @db.Timestamptz(3)
+  revokedAt     DateTime? @map("revoked_at") @db.Timestamptz(3)
+
+  user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@map("push_subscriptions")
+}
+
+/// Outbox notifikasi: ditulis dalam transaksi bisnis, dikirim worker.
+model Notification {
+  id         String             @id @default(uuid()) @db.Uuid
+  userId     String             @map("user_id") @db.Uuid
+  type       String
+  title      String
+  body       String
+  url        String
+  dedupeKey  String             @unique @map("dedupe_key")
+  status     NotificationStatus @default(pending)
+  attempts   Int                @default(0)
+  lastError  String?            @map("last_error")
+  createdAt  DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  sentAt     DateTime?          @map("sent_at") @db.Timestamptz(3)
+  readAt     DateTime?          @map("read_at") @db.Timestamptz(3)
+
+  user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@map("notifications")
 }

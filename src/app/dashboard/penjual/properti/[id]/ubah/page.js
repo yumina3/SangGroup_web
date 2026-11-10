@@ -1,35 +1,30 @@
 import ActionButton from "@/components/dashboard/ActionButton";
 import PageHeader from "@/components/dashboard/PageHeader";
-import PropertyForm from "@/components/dashboard/property/PropertyForm";
+import PropertyFormSrs from "@/components/dashboard/property/PropertyFormSrs";
 import { EmptyState } from "@/components/dashboard/States";
-import StatusBadge from "@/components/dashboard/StatusBadge";
-import { getAgentDashboard } from "@/lib/dashboard/agent-data";
-import { formatDateTime } from "@/lib/dashboard/format";
-import { LISTING_STATUS } from "@/lib/dashboard/status-labels";
+import { requirePageUser } from "@/lib/auth/current-user";
+import { listPublicCategories } from "@/lib/services/categories";
+import { getAgentProperty } from "@/lib/services/properties";
+import { listPublicProjects } from "@/lib/services/projects";
 
-/**
- * Halaman ubah listing (SRS-F-SEL-03 s.d. SEL-05, SEL-08).
- *
- * `params` dibaca saat request dan properti dicari dari data penjual yang
- * sedang login (bukan daftar statis), jadi rute ini boleh menunggu render
- * (`instant = false`) — tidak ada shell statis yang berguna untuk hambatan
- * navigasi di sini (Next.js "blocking route").
- */
 export const instant = false;
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
-  const property = findProperty(id);
+  const user = await requirePageUser(["agent"]);
+  const property = await getAgentProperty(user.id, id);
   return { title: property ? `Ubah — ${property.title}` : "Ubah Properti" };
 }
 
-function findProperty(id) {
-  return getAgentDashboard().properties.find((item) => item.id === id) ?? null;
-}
-
+/** Halaman ubah listing milik agen (FR-32, FR-34). */
 export default async function EditPropertyPage({ params }) {
   const { id } = await params;
-  const property = findProperty(id);
+  const user = await requirePageUser(["agent"]);
+  const [property, projects, categories] = await Promise.all([
+    getAgentProperty(user.id, id),
+    listPublicProjects(),
+    listPublicCategories(),
+  ]);
 
   if (!property) {
     return (
@@ -54,20 +49,12 @@ export default async function EditPropertyPage({ params }) {
     );
   }
 
-  const status = LISTING_STATUS[property.listingStatus] ?? LISTING_STATUS.DRAFT;
-
   return (
     <div className="space-y-5">
       <PageHeader
         eyebrow={["Portal Agen", "Properti", "Ubah"]}
         title={property.title}
-        description={`${property.cluster} · Unit ${property.unit} · Diperbarui ${formatDateTime(property.updatedAt)}`}
-        meta={
-          <span className="flex flex-wrap items-center gap-2">
-            <StatusBadge label={status.label} tone={status.tone} />
-            <span className="text-[12px] text-ag-slate-muted">ID {property.id}</span>
-          </span>
-        }
+        description={`${property.project?.name ?? "—"} · ${property.slug}`}
         actions={
           <ActionButton as="link" href="/dashboard/penjual/properti" variant="outline">
             Kembali ke daftar
@@ -75,17 +62,7 @@ export default async function EditPropertyPage({ params }) {
         }
       />
 
-      {property.listingStatus === "REJECTED" && property.rejectionReason ? (
-        <p
-          role="status"
-          className="rounded-dash border border-red-200 bg-red-50 px-4 py-3 text-[12.5px] leading-relaxed text-red-700"
-        >
-          <strong className="font-semibold">Alasan penolakan admin:</strong>{" "}
-          {property.rejectionReason} Perbaiki data terkait lalu kirim ulang.
-        </p>
-      ) : null}
-
-      <PropertyForm mode="edit" property={property} />
+      <PropertyFormSrs mode="edit" property={property} projects={projects} categories={categories} />
     </div>
   );
 }

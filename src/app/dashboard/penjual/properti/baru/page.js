@@ -1,23 +1,24 @@
 import ActionButton from "@/components/dashboard/ActionButton";
 import PageHeader from "@/components/dashboard/PageHeader";
-import PropertyForm from "@/components/dashboard/property/PropertyForm";
+import PropertyFormSrs from "@/components/dashboard/property/PropertyFormSrs";
+import { requirePageUser } from "@/lib/auth/current-user";
+import { listPublicCategories } from "@/lib/services/categories";
+import { listPublicProjects } from "@/lib/services/projects";
 
 export const metadata = { title: "Tambah Listing Baru" };
+export const instant = false;
 
-/**
- * Formulir listing baru (SRS-F-SEL-03 s.d. SEL-06).
- *
- * Navbar/sidebar agen berasal dari layout `/dashboard` — halaman ini tidak
- * membuat topbar sendiri. Formulirnya komponen klien karena peta Leaflet dan
- * pratinjau foto hanya bisa berjalan di browser.
- */
-export default function NewPropertyPage() {
+/** Form listing baru (FR-31, FR-33). */
+export default async function NewPropertyPage() {
+  await requirePageUser(["agent"]);
+  const [projects, categories] = await Promise.all([listPublicProjects(), listPublicCategories()]);
+
   return (
     <div className="space-y-5">
       <PageHeader
         eyebrow={["Portal Agen", "Properti", "Tambah"]}
         title="Tambah Listing Baru"
-        description="Lengkapi data unit, unggah foto, dan tandai titik lokasi. Listing baru masuk antrean verifikasi admin sebelum tayang di katalog."
+        description="Lengkapi proyek, kategori, harga, spesifikasi, dan titik lokasi. Listing baru masuk antrean verifikasi admin sebelum tayang di katalog."
         actions={
           <ActionButton as="link" href="/dashboard/penjual/properti" variant="outline">
             Kembali ke daftar
@@ -25,7 +26,7 @@ export default function NewPropertyPage() {
         }
       />
 
-      <PropertyForm mode="create" />
+      <PropertyFormSrs mode="create" projects={projects} categories={categories} />
     </div>
   );
 }

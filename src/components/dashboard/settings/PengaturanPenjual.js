@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 
+import { useRouter } from "next/navigation";
+
+import {
+  changePasswordAction,
+  updateProfileAction,
+} from "@/app/dashboard/penjual/pengaturan/actions";
 import ActionButton from "@/components/dashboard/ActionButton";
 import InfoNotice from "@/components/dashboard/InfoNotice";
 import PageHeader from "@/components/dashboard/PageHeader";
@@ -9,9 +15,19 @@ import ToggleSwitch from "@/components/dashboard/ToggleSwitch";
 import AgentAvatar from "@/components/dashboard/AgentAvatar";
 import { IconExit } from "@/components/dashboard/icons";
 import PropertyField from "@/components/dashboard/property/PropertyField";
+import PushNotifications from "@/components/notifications/PushNotifications";
 import { useToast } from "@/components/dashboard/Toast";
-import { getAgentDashboard } from "@/lib/dashboard/agent-data";
 import { penjualLogoutAction } from "@/app/penjual/actions";
+
+const EMPTY_AGENT = {
+  id: "",
+  name: "Agen",
+  email: "",
+  phone: "",
+  agencyName: "",
+  agentCode: "—",
+  avatarUrl: null,
+};
 
 const TABS = [
   { key: "profil", label: "Profil" },
@@ -56,8 +72,7 @@ const NOTIFICATIONS = [
  * `initialTab` boleh diisi dari halaman (`?tab=keamanan`) supaya tautan dari
  * menu profil langsung membuka bagian yang dituju.
  */
-export default function PengaturanPenjual({ initialTab = "profil" }) {
-  const { agent } = getAgentDashboard();
+export default function PengaturanPenjual({ agent = EMPTY_AGENT, initialTab = "profil" }) {
   const [tab, setTab] = useState(TABS.some((item) => item.key === initialTab) ? initialTab : "profil");
 
   return (
@@ -111,6 +126,8 @@ export default function PengaturanPenjual({ initialTab = "profil" }) {
 
 function ProfilTab({ agent }) {
   const toast = useToast();
+  const router = useRouter();
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     fullName: agent.name,
     phone: agent.phone,
@@ -127,18 +144,35 @@ function ProfilTab({ agent }) {
     form.phone !== agent.phone ||
     form.agencyName !== agent.agencyName;
 
-  function save(event) {
+  async function save(event) {
     event.preventDefault();
+
+    const phone = form.phone.replace(/[\s()-]/g, "").replace(/^0/, "+62").replace(/^62/, "+62");
     if (form.fullName.trim().length < 3) {
       setError("Nama lengkap minimal 3 karakter.");
       return;
     }
-    if (!/^\+62[0-9]{8,13}$/.test(form.phone.replace(/[\s()-]/g, ""))) {
+    if (!/^\+62[0-9]{8,13}$/.test(phone)) {
       setError("Nomor WhatsApp tidak valid. Gunakan format +62 diikuti 8–13 digit.");
       return;
     }
+
     setError("");
-    toast.push("Profil belum tersimpan: modul profil belum tersambung ke database.", "info");
+    setSaving(true);
+    const response = await updateProfileAction({
+      fullName: form.fullName.trim(),
+      phone,
+      agencyName: form.agencyName,
+    });
+    setSaving(false);
+
+    if (!response.ok) {
+      setError(response.formError ?? "Profil gagal disimpan.");
+      return;
+    }
+
+    toast.push("Profil tersimpan.", "success");
+    router.refresh();
   }
 
   return (
@@ -165,7 +199,7 @@ function ProfilTab({ agent }) {
           <button
             type="button"
             onClick={() =>
-              toast.push("Unggah foto belum aktif: Supabase Storage belum dikonfigurasi.", "info")
+              toast.push("Unggah foto profil belum aktif; API object storage sudah tersedia di backend.", "info")
             }
             className="mt-2 inline-flex h-9 items-center rounded-dash bg-ag-forest px-3 text-[12px] font-semibold text-white hover:bg-ag-forest-medium"
           >
@@ -238,7 +272,7 @@ function ProfilTab({ agent }) {
           >
             Batalkan perubahan
           </ActionButton>
-          <ActionButton type="submit" variant="primary">
+          <ActionButton type="submit" variant="primary" pending={saving} pendingLabel="Menyimpan…">
             Simpan perubahan
           </ActionButton>
         </div>
@@ -321,6 +355,7 @@ function KeamananTab() {
   const toast = useToast();
   const [form, setForm] = useState({ current: "", next: "", confirm: "" });
   const [errors, setErrors] = useState({});
+  const [saving, setSaving] = useState(false);
 
   const score = scoreOf(form.next);
   const strength = STRENGTH[score] ?? STRENGTH[0];
@@ -329,7 +364,7 @@ function KeamananTab() {
     return (value) => setForm((current) => ({ ...current, [name]: value }));
   }
 
-  function save(event) {
+  async function save(event) {
     event.preventDefault();
     const nextErrors = {};
     if (!form.current) nextErrors.current = "Kata sandi lama wajib diisi.";
@@ -353,11 +388,21 @@ function KeamananTab() {
       return;
     }
 
-    toast.push(
-      "Pratinjau: kata sandi belum diubah. Penyimpanan kata sandi belum aktif pada mode demo.",
-      "info",
-    );
+    setSaving(true);
+    const response = await changePasswordAction({
+      currentPassword: form.current,
+      newPassword: form.next,
+    });
+    setSaving(false);
+
+    if (!response.ok) {
+      setErrors(response.fieldErrors ?? {});
+      toast.push(response.formError ?? "Kata sandi gagal diubah.", "danger");
+      return;
+    }
+
     setForm({ current: "", next: "", confirm: "" });
+    toast.push("Kata sandi diperbarui. Sesi lain dicabut; gunakan kata sandi baru saat login berikutnya.", "success");
   }
 
   return (
@@ -369,9 +414,9 @@ function KeamananTab() {
         </p>
       </div>
 
-      <InfoNotice title="Perubahan kata sandi belum tersimpan">
-        Akun pada mode demo memakai kata sandi tetap. Formulir ini menampilkan aturan dan
-        pratinjau; penyimpanan aktif setelah autentikasi Supabase disambungkan.
+      <InfoNotice title="Kata sandi disimpan sebagai hash scrypt">
+        Setelah diganti, seluruh sesi lain dicabut dan Anda perlu masuk kembali dengan kata sandi
+        baru. Kata sandi lama tidak pernah disimpan dalam bentuk teks.
       </InfoNotice>
 
       <form noValidate onSubmit={save} className="max-w-2xl space-y-4">
@@ -425,7 +470,12 @@ function KeamananTab() {
         />
 
         <div className="border-t border-slate-100 pt-4">
-          <ActionButton type="submit" variant="primary">
+          <ActionButton
+            type="submit"
+            variant="primary"
+            pending={saving}
+            pendingLabel="Memperbarui…"
+          >
             Perbarui kata sandi
           </ActionButton>
         </div>
@@ -439,7 +489,6 @@ function NotifikasiTab() {
   const [prefs, setPrefs] = useState(() =>
     Object.fromEntries(NOTIFICATIONS.map((item) => [item.key, item.defaultChecked])),
   );
-  const [pushEnabled, setPushEnabled] = useState(false);
 
   return (
     <section className="space-y-5 rounded-dash border border-ag-line bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.03)]">
@@ -451,9 +500,9 @@ function NotifikasiTab() {
         </p>
       </div>
 
-      <InfoNotice title="Notifikasi push belum aktif">
-        Langganan Web Push dan daftar perangkat terdaftar (SRS-F-SEL-11) memerlukan kunci VAPID dan
-        tabel langganan. Sakelar di bawah belum dikirim ke server.
+      <InfoNotice title="Web Push aktif lewat service worker">
+        Izin notifikasi diminta saat Anda menekan tombol di bawah. Subscription disimpan di server
+        dan dipakai worker untuk mengirim pemberitahuan pengajuan, pesan, dan hasil verifikasi.
       </InfoNotice>
 
       <div className="divide-y divide-slate-100">
@@ -475,25 +524,13 @@ function NotifikasiTab() {
         ))}
       </div>
 
-      <div className="rounded-dash border border-ag-line bg-ag-ivory-surface px-4 py-3">
-        <ToggleSwitch
-          id="notif-push"
-          label="Notifikasi push di perangkat ini"
-          description="Aktifkan notifikasi mesin browser ditutup. Di iOS perlu memasang situs ke Home Screen."
-          checked={pushEnabled}
-          onChange={(value) => {
-            setPushEnabled(value);
-            toast.push(
-              value
-                ? "Push belum bisa didaftarkan: kunci VAPID belum dikonfigurasi."
-                : "Push dinonaktifkan di layar ini — belum tersimpan.",
-              "info",
-            );
-          }}
-        />
-        <p className="border-t border-ag-line pt-3 text-[12px] text-ag-slate-secondary">
-          Perangkat terdaftar: <span className="font-semibold text-ag-slate">Belum ada</span>
+      <div className="space-y-3 rounded-dash border border-ag-line bg-ag-ivory-surface px-4 py-3">
+        <p className="text-[13px] font-semibold text-ag-slate">Notifikasi push di perangkat ini</p>
+        <p className="text-[12px] leading-relaxed text-ag-slate-secondary">
+          Aktifkan agar notifikasi tetap masuk meski tab browser ditutup. Di iOS perlu memasang
+          situs ke Home Screen terlebih dahulu.
         </p>
+        <PushNotifications />
       </div>
     </section>
   );

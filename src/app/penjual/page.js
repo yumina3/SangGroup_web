@@ -2,28 +2,29 @@ import { redirect } from "next/navigation";
 
 import AuthShell from "@/components/auth/AuthShell";
 import PenjualLoginForm from "@/components/auth/PenjualLoginForm";
-import { DEMO_PENJUAL, readPenjualSession } from "@/lib/auth/penjual-session";
+import { getCurrentUser } from "@/lib/auth/current-user";
 
 export const metadata = { title: "Masuk Penjual" };
 
-/** Halaman ini membaca cookie sesi, jadi tidak diprerender (tidak ada shell statis berguna). */
+/** Halaman ini membaca cookie sesi, jadi tidak diprerender. */
 export const instant = false;
 
+const HOME_BY_ROLE = {
+  agent: "/dashboard/penjual",
+  admin: "/admin",
+  buyer: "/akun",
+};
+
 /**
- * Gerbang dashboard penjual.
+ * Gerbang login. Bila sesi masih berlaku, pengguna langsung diarahkan ke
+ * area sesuai perannya.
  *
- * Membuka /penjual selalu memperlihatkan formulir login lebih dulu. Bila sesi
- * penjual masih berlaku, pengguna langsung diteruskan ke /dashboard/penjual
- * (tidak perlu mengetik ulang). Setelah login, Server Action menulis cookie
- * sesi lalu mengarahkan ke dashboard.
- *
- * Halaman ini membaca cookie, jadi dirender di request time. Tidak ada
- * pembungkus <Suspense> karena tidak ada shell statis yang berguna untuk
- * gerbang login ini.
+ * Akun demo berasal dari `prisma/seed.mts` (jalankan `npm run db:seed`),
+ * dibuat lewat Supabase Auth, bukan konstanta di kode.
  */
 export default async function PenjualGatePage() {
-  const session = await readPenjualSession();
-  if (session) redirect("/dashboard/penjual");
+  const user = await getCurrentUser();
+  if (user) redirect(HOME_BY_ROLE[user.role] ?? "/");
 
   return (
     <AuthShell
@@ -32,25 +33,29 @@ export default async function PenjualGatePage() {
       description="Kelola listing, tindak lanjuti pengajuan pembeli, dan atur profil agen dari satu tempat."
       footer={
         <p>
-          Belum punya akun agen?{" "}
-          <a href="/pasang-properti" className="font-semibold text-brand underline underline-offset-2">
-            Daftar sebagai agen
-          </a>{" "}
-          — akun baru aktif setelah disetujui admin.
+          Ingin membeli rumah?{" "}
+          <a href="/register" className="font-semibold text-brand underline underline-offset-2">
+            Daftar sebagai pembeli
+          </a>
+          . Akun agen/admin dibuat oleh admin (SRS FR-22).
         </p>
       }
     >
       <PenjualLoginForm />
 
       <div className="mt-5 rounded-md border border-dashed border-line bg-brand-cream px-4 py-3 text-[12px] leading-relaxed text-muted">
-        <p className="font-semibold text-brand-ink">Akun demo</p>
+        <p className="font-semibold text-brand-ink">Akun demo hasil seed</p>
         <p className="mt-1">
-          Email: <code className="font-semibold text-brand-ink">{DEMO_PENJUAL.email}</code>
+          Agen: <code className="font-semibold text-brand-ink">nadia.prameswari@sanggroup.id</code>
           <br />
-          Kata sandi: <code className="font-semibold text-brand-ink">{DEMO_PENJUAL.password}</code>
+          Kata sandi: <code className="font-semibold text-brand-ink">penjual12345</code>
         </p>
         <p className="mt-1">
-          Mode demo: data dashboard masih contoh dan perubahan hanya tampil di layar ini.
+          Admin: <code className="font-semibold text-brand-ink">admin@sanggroup.id</code> ·{" "}
+          <code className="font-semibold text-brand-ink">admin12345</code>
+        </p>
+        <p className="mt-1">
+          Jalankan <code>npm run db:seed</code> setelah migrasi untuk membuat akun ini.
         </p>
       </div>
     </AuthShell>

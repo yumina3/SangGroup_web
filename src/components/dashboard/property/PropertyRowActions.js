@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
+import {
+  changeSaleStatusAction,
+  deletePropertyAction,
+  submitPropertyAction,
+} from "@/app/dashboard/penjual/properti/actions";
 import ActionButton from "@/components/dashboard/ActionButton";
 import Modal from "@/components/dashboard/Modal";
 import { useToast } from "@/components/dashboard/Toast";
@@ -28,8 +34,10 @@ export default function PropertyRowActions({ property }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
   const containerRef = useRef(null);
   const toast = useToast();
+  const router = useRouter();
 
   useEffect(() => {
     if (!menuOpen) return undefined;
@@ -69,13 +77,20 @@ export default function PropertyRowActions({ property }) {
         property={property}
         options={transitionsFor(property)}
         triggerLabel="Ubah status"
-        onSave={(next) =>
+        onSave={async (next) => {
+          setBusy(true);
+          const response = await changeSaleStatusAction(property.id, next);
+          setBusy(false);
+          if (!response.ok) {
+            toast.push(response.formError ?? "Status gagal disimpan.", "danger");
+            return;
+          }
           toast.push(
-            `Status "${property.title}" akan menjadi ${labelOf(SALE_STATUS, next)} (pratinjau). ` +
-              "Ketersediaan belum tersimpan karena penyimpanan belum aktif.",
-            "info",
-          )
-        }
+            `Status "${property.title}" kini ${labelOf(SALE_STATUS, next)}.`,
+            "success",
+          );
+          router.refresh();
+        }}
       />
 
       <div className="relative" ref={containerRef}>
@@ -141,12 +156,19 @@ export default function PropertyRowActions({ property }) {
             <ActionButton
               variant="primary"
               size="md"
-              onClick={() => {
+              pending={busy}
+              pendingLabel="Mengirim…"
+              onClick={async () => {
+                setBusy(true);
+                const response = await submitPropertyAction(property.id);
+                setBusy(false);
                 setSubmitOpen(false);
-                toast.push(
-                  `"${property.title}" akan diajukan untuk verifikasi. Pengiriman belum tersimpan karena penyimpanan belum aktif.`,
-                  "info",
-                );
+                if (!response.ok) {
+                  toast.push(response.formError ?? "Gagal mengirim verifikasi.", "danger");
+                  return;
+                }
+                toast.push(`"${property.title}" dikirim untuk verifikasi admin.`, "success");
+                router.refresh();
               }}
             >
               Kirim untuk verifikasi
@@ -176,12 +198,19 @@ export default function PropertyRowActions({ property }) {
             <ActionButton
               variant="danger"
               size="md"
-              onClick={() => {
+              pending={busy}
+              pendingLabel="Menghapus…"
+              onClick={async () => {
+                setBusy(true);
+                const response = await deletePropertyAction(property.id);
+                setBusy(false);
                 setDeleteOpen(false);
-                toast.push(
-                  `Permintaan hapus untuk "${property.title}" diterima. Penyimpanan belum aktif, jadi listing masih tampil di daftar.`,
-                  "info",
-                );
+                if (!response.ok) {
+                  toast.push(response.formError ?? "Gagal menghapus listing.", "danger");
+                  return;
+                }
+                toast.push(`"${property.title}" dihapus.`, "success");
+                router.refresh();
               }}
             >
               Hapus listing
