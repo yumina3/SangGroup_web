@@ -7,7 +7,7 @@ export const metadata = { title: "Kontak" };
 /**
  * Halaman Kontak agen.
  *
- * Navbar dan sidebar dipasang sekali oleh `src/app/dashboard/layout.js`;
+ * Navbar dan sidebar dipasang sekali oleh `src/app/dashboard/penjual/layout.js`;
  * halaman ini hanya mengisi konten utama. Data masih demo internal dari
  * `getAgentContacts()` dan nanti diganti query Prisma yang dibatasi agen
  * yang sedang login.

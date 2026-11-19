@@ -84,6 +84,17 @@ export const loginSchema = z.object({
 });
 
 /**
+ * Login tiga portal (pembeli, agen, admin). Server Action memilih portal, bukan
+ * pengguna, sehingga field role tidak pernah dibaca dari form.
+ */
+export const portalLoginSchema = z.object({
+  email,
+  password: z.string().min(1, { error: "Kata sandi wajib diisi" }),
+  next: z.string().optional(),
+  remember: z.string().optional(),
+});
+
+/**
  * FormData -> objek polos. Hanya field yang dikenal yang dibaca.
  */
 export function formDataToObject(formData, keys) {

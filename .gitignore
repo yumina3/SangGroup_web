@@ -68,3 +68,7 @@ dev-penjual3.log
 
 PROMPT-VERIFIKASI.md
 AGENTS.md deals
+
+# Temporary / local scripts
+fix-encoding.py
+tmp-inspect.mjs

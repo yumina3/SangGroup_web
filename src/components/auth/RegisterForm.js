@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import Link from "next/link";
 
 import Alert from "@/components/ui/Alert";
 import Field from "@/components/ui/Field";
@@ -68,13 +67,6 @@ export default function RegisterForm() {
       />
 
       <SubmitButton pendingLabel="Membuat akun…">Daftar</SubmitButton>
-
-      <p className="text-center text-[13px] text-muted">
-        Sudah punya akun?{" "}
-        <Link href="/login" className="font-semibold text-brand underline underline-offset-2">
-          Masuk
-        </Link>
-      </p>
     </form>
   );
 }

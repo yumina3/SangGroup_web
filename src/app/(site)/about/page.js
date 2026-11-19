@@ -9,11 +9,12 @@ export const metadata = {
 /**
  * Halaman Tentang Kami (/about).
  *
- * Sumber: docs/site/tentang_kami_sang_group_semarang/code.html — empat section:
- *   1. Hero gradien + tiga kartu pilar (3 Kawasan / 100% SHM / 40% RTH)
+ * Sumber: docs/site/tentang_kami_sang_group_semarang/code.html — lima section:
+ *   1. Hero gradien
  *   2. Visi & Misi dalam satu kartu terbelah dua
  *   3. Perjalanan (timeline foto lingkaran bertumpuk)
- *   4. Tim pakar (deretan kartu potret)
+ *   4. Statistik pilar (3 Kawasan / 100% SHM / 40% RTH)
+ *   5. Tim pakar (deretan kartu potret)
  *
  * Navbar dan footer dipasang oleh layout grup (site), bukan di sini.
  */
@@ -32,37 +33,13 @@ export default function AboutPage() {
         />
 
         <div className="relative z-10 mx-auto max-w-7xl px-6">
-          <div className="mx-auto mb-16 max-w-4xl text-center">
+          <div className="mx-auto max-w-4xl text-center">
             <h1 className="mb-6 font-sans text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl md:text-5xl lg:text-[52px]">
               {ABOUT_HERO.title}
             </h1>
             <p className="mx-auto max-w-3xl font-sans text-base font-light leading-relaxed text-stone-300 md:text-lg">
               {ABOUT_HERO.body}
             </p>
-          </div>
-
-          <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-3">
-            {ABOUT_HERO.pillars.map((pillar) => (
-              <div
-                key={pillar.id}
-                className="flex flex-col justify-between border border-[#c5a869]/30 bg-[#09281F]/90 p-8 shadow-xl backdrop-blur-sm"
-              >
-                <div>
-                  <div className="mb-3 font-sans text-4xl font-extrabold tracking-tight text-[#c5a869] lg:text-5xl">
-                    {pillar.stat}
-                  </div>
-                  <span className="mb-3 block font-sans text-xs font-semibold uppercase tracking-[0.2em] text-stone-400">
-                    {pillar.statLabel}
-                  </span>
-                  <p className="font-sans text-sm font-light leading-relaxed text-stone-300">
-                    {pillar.body}
-                  </p>
-                </div>
-                <p className="mt-6 border-t border-white/10 pt-4 font-sans text-[11px] font-bold uppercase tracking-[0.14em] text-[#c5a869]">
-                  {pillar.title}
-                </p>
-              </div>
-            ))}
           </div>
         </div>
       </section>
@@ -204,7 +181,45 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* ============ 4. TIM PAKAR ============ */}
+      {/* ============ 4. STATISTIK PILAR ============ */}
+      <section
+        aria-label="Statistik kawasan Sang Group"
+        className="relative w-full overflow-hidden bg-[#0B3126] py-16 text-white lg:py-20"
+      >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-0 opacity-20 mix-blend-overlay"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 20% 20%, rgba(197,168,89,0.55), transparent 45%), radial-gradient(circle at 80% 70%, rgba(197,168,89,0.35), transparent 40%)",
+          }}
+        />
+        <div className="relative z-10 mx-auto grid max-w-5xl grid-cols-1 gap-6 px-6 md:grid-cols-3">
+          {ABOUT_HERO.pillars.map((pillar) => (
+            <div
+              key={pillar.id}
+              className="flex flex-col justify-between border border-[#c5a869]/30 bg-[#09281F]/90 p-8 shadow-xl backdrop-blur-sm"
+            >
+              <div>
+                <div className="mb-3 font-sans text-4xl font-extrabold tracking-tight text-[#c5a869] lg:text-5xl">
+                  {pillar.stat}
+                </div>
+                <span className="mb-3 block font-sans text-xs font-semibold uppercase tracking-[0.2em] text-stone-400">
+                  {pillar.statLabel}
+                </span>
+                <p className="font-sans text-sm font-light leading-relaxed text-stone-300">
+                  {pillar.body}
+                </p>
+              </div>
+              <p className="mt-6 border-t border-white/10 pt-4 font-sans text-[11px] font-bold uppercase tracking-[0.14em] text-[#c5a869]">
+                {pillar.title}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ============ 5. TIM PAKAR ============ */}
       <section className="relative w-full overflow-hidden bg-[#0d3b2e] py-20 text-white lg:py-28">
         <div className="mx-auto max-w-7xl px-6">
           <div className="mb-16 flex flex-col justify-between gap-6 lg:flex-row lg:items-end">

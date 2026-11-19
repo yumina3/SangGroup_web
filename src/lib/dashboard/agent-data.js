@@ -76,10 +76,15 @@
  * @property {AgentInquiry[]} inquiries
  */
 
+/** @returns {AgentProfile} */
+export function getAgentProfile() {
+  return { ...AGENT };
+}
+
 /** @returns {AgentDashboard} */
 export function getAgentDashboard() {
   return {
-    agent: { ...AGENT },
+    agent: getAgentProfile(),
     summary: { ...SUMMARY },
     properties: PROPERTIES,
     inquiries: INQUIRIES,

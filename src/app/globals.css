@@ -162,6 +162,13 @@
   --font-sans: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
 
   /*
+   * Display serif khusus wordmark header dan judul hero situs publik. Memuat
+   * varian normal dan italic Playfair Display; kelas `font-luxury` tidak
+   * dipakai di tempat lain.
+   */
+  --font-luxury: var(--font-playfair), "Playfair Display", Georgia, serif;
+
+  /*
    * Alias serif diarahkan ke Plus Jakarta Sans: seluruh aplikasi memakai satu
    * keluarga font, sehingga kelas `font-serif` yang masih tersisa di halaman
    * tidak memunculkan typeface lain (mis. Georgia bawaan browser).

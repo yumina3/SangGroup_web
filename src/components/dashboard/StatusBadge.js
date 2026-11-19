@@ -20,12 +20,17 @@ const DOT = {
  * Badge status. Selalu memuat teks, dan titik warna hanya pelengkap, supaya
  * status tetap terbaca tanpa membedakan warna (WCAG 1.4.1).
  */
-export default function StatusBadge({ label, tone = "neutral", dot = false }) {
+export default function StatusBadge({
+  label,
+  tone = "neutral",
+  dot = false,
+  className = "",
+}) {
   const style = TONE[tone] ?? TONE.neutral;
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-tag border px-2.5 py-1 text-[11px] font-semibold ${style}`}
+      className={`inline-flex items-center gap-1.5 rounded-tag border px-2.5 py-1 text-[11px] font-semibold ${style} ${className}`}
     >
       {dot ? (
         <span

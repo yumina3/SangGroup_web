@@ -32,7 +32,7 @@ export default function HeroSite() {
       {/* Wordmark kanan atas */}
       <div className="relative z-10 mx-auto flex w-full max-w-7xl justify-end px-6 pt-8 lg:px-16">
         <div className="text-right">
-          <div className="font-serif text-2xl font-bold italic leading-none tracking-tight text-site-gold lg:text-3xl">
+          <div className="font-luxury text-2xl font-bold italic leading-none tracking-tight text-site-gold lg:text-3xl">
             Sang Group
           </div>
           <div className="mt-0.5 font-sans text-[8px] font-medium uppercase tracking-[0.25em] text-white/90">
@@ -44,10 +44,10 @@ export default function HeroSite() {
       {/* Judul utama */}
       <div className="relative z-10 mx-auto my-auto flex w-full max-w-7xl justify-end px-6 lg:px-16">
         <div className="max-w-xl text-right">
-          <h1 className="mb-3 font-serif text-5xl font-semibold leading-[1.08] tracking-tight text-white sm:text-6xl lg:text-7xl">
+          <h1 className="mb-3 font-luxury text-5xl font-semibold leading-[1.08] tracking-tight text-white sm:text-6xl lg:text-7xl">
             {HERO.title}
             <br />
-            <span className="font-serif font-normal italic text-site-gold">
+            <span className="font-luxury font-normal italic text-site-gold">
               {HERO.titleAccent}
             </span>
           </h1>

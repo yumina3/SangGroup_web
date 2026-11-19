@@ -37,7 +37,7 @@ export default function Modal({ open, onClose, title, description, footer, child
         event.preventDefault();
         onClose();
       }}
-      className="w-[min(560px,calc(100vw-2rem))] rounded-dash border border-ag-line bg-white p-0 text-ag-slate backdrop:bg-black/40"
+      className="m-auto w-11/12 max-w-[560px] rounded-dash border border-ag-line bg-white p-0 text-ag-slate backdrop:bg-black/40"
     >
       {open ? (
         <div className="flex flex-col">

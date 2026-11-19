@@ -16,14 +16,14 @@ import {
   IconSettings,
   IconExit,
 } from "@/components/dashboard/icons";
-import { penjualLogoutAction } from "@/app/penjual/actions";
+import { agentLogoutAction } from "@/app/(auth)/logout/actions";
 import { AGENT_NAV_GROUPS, FALLBACK_NAV_ICON, NAV_STATUS } from "./agent-nav";
 
 /**
  * NAVBAR AGEN — satu-satunya tempat sidebar dan topbar dashboard agen
  * dideklarasikan.
  *
- * Dipasang sekali di `src/app/dashboard/layout.js`; semua halaman
+ * Dipasang sekali di `src/app/dashboard/penjual/layout.js`; semua halaman
  * `/dashboard/**` (ringkasan, properti, pengajuan, pengaturan, dst.) memakai
  * navbar ini tanpa membuat navbar sendiri.
  *
@@ -366,7 +366,7 @@ export function ProfileMenu({ agent }) {
             Keamanan akun
           </Link>
 
-          <form action={penjualLogoutAction} className="mt-1 border-t border-slate-100 pt-1">
+          <form action={agentLogoutAction} className="mt-1 border-t border-slate-100 pt-1">
             <button
               type="submit"
               role="menuitem"
@@ -496,7 +496,7 @@ export function MenuDrawer({ open, onClose }) {
           >
             Kembali ke situs publik
           </Link>
-          <form action={penjualLogoutAction}>
+          <form action={agentLogoutAction}>
             <button
               type="submit"
               className="flex min-h-9 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-white/70 hover:bg-white/10 hover:text-white"

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { PrismaPg } from "@prisma/adapter-pg";
+
 import { PrismaClient } from "@/generated/prisma/client";
 
 /**
@@ -20,7 +22,12 @@ export function getDb() {
   }
 
   if (!globalForPrisma.__sangPrisma) {
+    // Prisma 7 memakai driver adapter; tanpa ini PrismaClient tidak bisa
+    // membuka koneksi sama sekali. `pg` dipakai sebagai driver PostgreSQL.
+    const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+
     globalForPrisma.__sangPrisma = new PrismaClient({
+      adapter,
       log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
     });
   }

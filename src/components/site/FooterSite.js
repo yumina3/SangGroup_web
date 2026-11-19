@@ -7,6 +7,8 @@
  * WhatsApp mengambang.
  */
 
+import Link from "next/link";
+
 const FOOTER_COLUMNS = [
   {
     title: "Navigasi Utama",
@@ -37,12 +39,12 @@ export default function FooterSite() {
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
           {/* Kolom 1: identitas */}
           <div>
-            <a href="/" className="inline-flex items-baseline leading-none">
-              <span className="font-serif text-2xl font-bold italic text-white">Sang</span>
-              <span className="mx-1.5 font-serif text-2xl font-bold italic text-[#C5A059]">
+            <Link href="/" className="inline-flex items-baseline leading-none">
+              <span className="font-luxury text-2xl font-bold italic text-white">Sang</span>
+              <span className="mx-1.5 font-luxury text-2xl font-bold italic text-[#C5A059]">
                 Group
               </span>
-            </a>
+            </Link>
             <p className="mt-1 font-sans text-[8px] uppercase tracking-[0.28em] text-white/40">
               Residential &amp; Lifestyle Community
             </p>

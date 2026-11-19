@@ -2,6 +2,10 @@
 
 import { usePathname } from "next/navigation";
 
+import Link from "next/link";
+
+import BuyerMenu from "./BuyerMenu";
+
 /**
  * Satu-satunya navbar untuk role pengguna (situs publik).
  *
@@ -59,19 +63,19 @@ export default function NavbarSite() {
       {/* ---- Tier 1: identitas brand ---- */}
       <header className="w-full bg-white px-6 py-4">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-center">
-          <a
+          <Link
             href="/"
             className="inline-flex items-center leading-none"
             aria-label="Sang Group — beranda"
           >
-            <span className="font-serif text-3xl font-bold italic tracking-tight text-site-forest md:text-4xl">
+            <span className="font-luxury text-3xl font-bold italic tracking-tight text-site-forest md:text-4xl">
               Sang
             </span>
             <BrandLogo />
-            <span className="font-serif text-3xl font-bold italic tracking-tight text-[#C5A059] md:text-4xl">
+            <span className="font-luxury text-3xl font-bold italic tracking-tight text-[#C5A059] md:text-4xl">
               Group
             </span>
-          </a>
+          </Link>
           <p className="mt-1 text-center font-sans text-[9px] font-semibold uppercase tracking-[0.3em] text-gray-500 md:text-[10px]">
             Residential &amp; Lifestyle Community
           </p>
@@ -83,7 +87,7 @@ export default function NavbarSite() {
         aria-label="Navigasi utama"
         className="sticky top-0 z-50 bg-[#0B3126] font-sans text-xs text-white shadow-sm"
       >
-        <div className="relative mx-auto flex h-11 max-w-7xl items-center justify-center px-6 lg:px-16">
+        <div className="relative mx-auto flex min-h-11 max-w-7xl flex-wrap items-center justify-center gap-x-3 gap-y-2 px-6 py-2 lg:px-16">
           <ul className="flex flex-wrap items-center justify-center gap-x-5 font-sans text-[11px] font-semibold uppercase tracking-wider text-gray-200 sm:gap-x-7 md:gap-x-9">
             {SITE_NAV.map((item) => {
               const active = item.hash
@@ -106,7 +110,9 @@ export default function NavbarSite() {
             })}
           </ul>
 
-          <div className="absolute right-6 flex items-center space-x-1.5 font-sans text-[11px] font-semibold lg:right-16">
+          <div className="flex items-center gap-2 font-sans text-[11px] font-semibold lg:absolute lg:right-16 lg:top-1/2 lg:-translate-y-1/2">
+            <BuyerMenu />
+            <span aria-hidden="true" className="h-3 w-px bg-white/20" />
             <span className="cursor-pointer text-[#C5A059]">ID</span>
             <span className="font-normal text-gray-400">|</span>
             <span className="cursor-pointer font-normal text-white hover:text-[#C5A059]">

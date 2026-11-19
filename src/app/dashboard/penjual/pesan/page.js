@@ -6,7 +6,7 @@ export const metadata = { title: "Pesan" };
 /**
  * Halaman Pesan agen.
  *
- * Navbar dan sidebar dipasang sekali oleh `src/app/dashboard/layout.js`.
+ * Navbar dan sidebar dipasang sekali oleh `src/app/dashboard/penjual/layout.js`.
  * `?contact=` dari halaman Kontak memilih percakapan yang sesuai saat
  * halaman dibuka. Data percakapan masih demo internal dan nanti diambil dari
  * tabel pesan di database.

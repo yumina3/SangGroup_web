@@ -11,7 +11,7 @@ import { IconExit } from "@/components/dashboard/icons";
 import PropertyField from "@/components/dashboard/property/PropertyField";
 import { useToast } from "@/components/dashboard/Toast";
 import { getAgentDashboard } from "@/lib/dashboard/agent-data";
-import { penjualLogoutAction } from "@/app/penjual/actions";
+import { agentLogoutAction } from "@/app/(auth)/logout/actions";
 
 const TABS = [
   { key: "profil", label: "Profil" },
@@ -251,7 +251,7 @@ function ProfilTab({ agent }) {
  * Sesi & keluar (tombol "Keluar" di bagian profil agen).
  *
  * Tombol keluar adalah tombol submit form yang menjalankan Server Action
- * `penjualLogoutAction`: cookie sesi dihapus di server lalu pengguna
+ * `agentLogoutAction`: cookie sesi dihapus di server lalu pengguna
  * diarahkan ke gerbang login /penjual. Garis besar sungguhan, bukan sekadar
  * menyembunyikan halaman di browser.
  */
@@ -267,7 +267,7 @@ function SesiTab() {
         </p>
       </div>
 
-      <form action={penjualLogoutAction} className="mt-4 flex flex-wrap items-center justify-between gap-3">
+      <form action={agentLogoutAction} className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-md text-[12.5px] leading-relaxed text-ag-slate-secondary">
           Sesi berlaku hingga 8 jam. Keluar sekarang menghapus cookie sesi di browser ini.
         </p>

@@ -18,25 +18,25 @@ export const PUBLIC_NAV = [
 
 export const ROLE_NAV = {
   buyer: [
-    { label: "Ringkasan", href: "/pembeli", ready: false },
-    { label: "Favorit", href: "/pembeli/favorit", ready: false },
-    { label: "Pengajuan", href: "/pembeli/pengajuan", ready: false },
-    { label: "Profil", href: "/pembeli/profil", ready: false },
+    { label: "Ringkasan", href: "/dashboard/pembeli", ready: false },
+    { label: "Favorit", href: "/dashboard/pembeli/favorit", ready: false },
+    { label: "Pengajuan", href: "/dashboard/pembeli/pengajuan", ready: false },
+    { label: "Profil", href: "/dashboard/pembeli/profil", ready: false },
   ],
   agent: [
-    { label: "Dashboard", href: "/agen", ready: false },
-    { label: "Properties", href: "/agen/properti", ready: false },
-    { label: "Pipeline", href: "/agen/pipeline", ready: false },
-    { label: "Masterplan", href: "/agen/masterplan", ready: false },
-    { label: "Settings", href: "/agen/pengaturan", ready: false },
+    { label: "Dashboard", href: "/dashboard/penjual", ready: false },
+    { label: "Properties", href: "/dashboard/penjual/properti", ready: false },
+    { label: "Pipeline", href: "/dashboard/penjual/pengajuan", ready: false },
+    { label: "Masterplan", href: "/dashboard/penjual/properti/baru", ready: false },
+    { label: "Settings", href: "/dashboard/penjual/pengaturan", ready: false },
   ],
   admin: [
-    { label: "Dashboard", href: "/admin", ready: false },
-    { label: "Verification", href: "/admin/verifikasi", ready: false },
-    { label: "Users", href: "/admin/pengguna", ready: false },
-    { label: "Categories", href: "/admin/kategori", ready: false },
-    { label: "Recap", href: "/admin/rekap", ready: false },
-    { label: "Settings", href: "/admin/pengaturan", ready: false },
+    { label: "Dashboard", href: "/dashboard/admin", ready: false },
+    { label: "Verification", href: "/dashboard/admin/verifikasi", ready: false },
+    { label: "Users", href: "/dashboard/admin/pengguna", ready: false },
+    { label: "Categories", href: "/dashboard/admin/kategori", ready: false },
+    { label: "Recap", href: "/dashboard/admin/rekap", ready: false },
+    { label: "Settings", href: "/dashboard/admin/pengaturan", ready: false },
   ],
 };
 

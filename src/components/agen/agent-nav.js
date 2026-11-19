@@ -21,7 +21,7 @@ import {
  *
  * - "ready"      : halaman sudah dibangun — termasuk halaman pengembangan
  *                  lanjutan SRS §3.5 seperti Deals/Pipeline, Tugas, Kontak,
- *                  dan Pesan.
+ *                  Pesan, Analitik Penjualan, dan Kinerja Agen.
  * - "later"      : halaman ada di SRS §4 tetapi modulnya dikerjakan terpisah.
  * - "outOfScope" : layar ada di docs/agen tetapi SRS §3.5 menyatakan tidak
  *                  dibangun, jadi menu hanya ditampilkan dengan keterangan
@@ -95,8 +95,18 @@ export const AGENT_NAV_GROUPS = [
   {
     title: "Intelligence & GIS",
     items: [
-      { label: "Analitik Penjualan", href: null, status: NAV_STATUS.outOfScope, icon: IconChart },
-      { label: "Kinerja Agen", href: null, status: NAV_STATUS.outOfScope, icon: IconBadge },
+      {
+        label: "Analitik Penjualan",
+        href: "/dashboard/penjual/analitik",
+        status: NAV_STATUS.ready,
+        icon: IconChart,
+      },
+      {
+        label: "Kinerja Agen",
+        href: "/dashboard/penjual/kinerja",
+        status: NAV_STATUS.ready,
+        icon: IconBadge,
+      },
       { label: "Corong Konversi", href: null, status: NAV_STATUS.outOfScope, icon: IconFunnel },
       { label: "Masterplan GIS", href: null, status: NAV_STATUS.outOfScope, icon: IconMap },
     ],
@@ -111,7 +121,12 @@ export const AGENT_NAV_GROUPS = [
         status: NAV_STATUS.ready,
         icon: IconSliders,
       },
-      { label: "Pusat Bantuan", href: null, status: NAV_STATUS.outOfScope, icon: IconHelp },
+      {
+        label: "Pusat Bantuan",
+        href: "/dashboard/penjual/bantuan",
+        status: NAV_STATUS.ready,
+        icon: IconHelp,
+      },
     ],
   },
 ];

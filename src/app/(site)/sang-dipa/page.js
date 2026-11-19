@@ -1,3 +1,12 @@
+import FavoriteButton from "@/components/site/FavoriteButton";
+import { formatRupiahShort } from "@/lib/dashboard/format";
+import { loginPathForRole } from "@/lib/auth/redirects";
+import { getSessionProfile } from "@/lib/auth/session";
+import {
+  listFavoriteIds,
+  listPublicProperties,
+} from "@/lib/properties/catalog";
+import { favoriteViewer } from "@/lib/properties/viewer";
 import { AMBIENCE, DIPA_HERO, GALERI, SPESIFIKASI } from "@/lib/site/sang-dipa";
 
 export const metadata = {
@@ -6,6 +15,9 @@ export const metadata = {
     "Sang Dipa Residence di perbukitan Candisari: hunian tropis kontemporer dengan legalitas SHM, taman 40%, dan clubhouse eksklusif.",
 };
 
+/** Halaman ini membaca sesi dan katalog properti pada setiap request. */
+export const instant = false;
+
 /**
  * Halaman Sang Dipa (/sang-dipa) — "Products".
  *
@@ -13,8 +25,32 @@ export const metadata = {
  * enam section: hero, ambience, taman, clubhouse, spesifikasi, galeri.
  *
  * Navbar dan footer dipasang oleh layout grup (site), bukan di sini.
+ *
+ * Kartu "Tipe hunian" memakai unit Sang Dipa dari database agar tombol
+ * favorit memiliki id properti yang sah. Susunan dan gaya kartu tetap sama.
  */
-export default function SangDipaPage() {
+export default async function SangDipaPage() {
+  const [propertiesResult, profile] = await Promise.all([
+    listPublicProperties(),
+    getSessionProfile(),
+  ]);
+
+  const viewer = favoriteViewer(profile);
+  const favoriteIds =
+    viewer.isBuyer && viewer.isActive
+      ? await listFavoriteIds(profile.id)
+      : new Set();
+
+  const types = propertiesResult.ok
+    ? propertiesResult.properties.filter(
+        (property) => property.projectSlug === "sang-dipa",
+      )
+    : [];
+  const loginHref = loginPathForRole("buyer", {
+    next: "/sang-dipa#spesifikasi",
+    reason: "unauth",
+  });
+
   return (
     <>
       {/* ============ 1. HERO ============ */}
@@ -182,45 +218,73 @@ export default function SangDipaPage() {
                 {SPESIFIKASI.intro}
               </p>
 
-              <ul className="mt-6 flex flex-col gap-4">
-                {SPESIFIKASI.types.map((type) => (
-                  <li key={type.id}>
-                    <article className="overflow-hidden rounded-xl bg-white">
-                      <div className="flex items-stretch">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={type.image}
-                          alt={type.alt}
-                          className="h-[120px] w-[130px] shrink-0 object-cover"
-                          loading="lazy"
-                        />
-                        <div className="flex flex-1 flex-col justify-center p-4">
-                          <span className="font-sans text-[9.5px] font-bold uppercase tracking-[0.12em] text-[#b39556]">
-                            {type.label}
-                          </span>
-                          <h3 className="mt-1 font-sans text-[15px] font-bold text-[#0d3b2e]">
-                            {type.name}
-                          </h3>
-                          <p className="mt-1 font-sans text-[10.5px] leading-snug text-gray-500">
-                            {type.spec}
-                          </p>
-                          <div className="mt-2 flex items-center justify-between gap-2">
-                            <span className="font-sans text-[12px] font-bold tabular-nums text-[#0d3b2e]">
-                              {type.price}
-                            </span>
-                            <a
-                              href="#galeri"
-                              className="font-sans text-[10px] font-bold uppercase tracking-[0.08em] text-[#b39556] no-underline hover:text-[#0d3b2e]"
-                            >
-                              Lihat Denah →
-                            </a>
+              {types.length === 0 ? (
+                <p className="mt-6 rounded-lg border border-white/15 px-4 py-5 font-sans text-[12px] leading-relaxed text-white/65">
+                  Belum ada unit Sang Dipa yang tayang di katalog. Hubungi
+                  konsultan SANG Group untuk informasi ketersediaan terbaru.
+                </p>
+              ) : (
+                <ul className="mt-6 flex flex-col gap-4">
+                  {types.map((property, index) => {
+                    const image =
+                      SPESIFIKASI.types[index % SPESIFIKASI.types.length];
+
+                    return (
+                      <li key={property.id}>
+                        <article className="overflow-hidden rounded-xl bg-white">
+                          <div className="flex items-stretch">
+                            <div className="relative shrink-0">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={image.image}
+                                alt={property.title}
+                                className="h-[120px] w-[130px] object-cover"
+                                loading="lazy"
+                              />
+                              <FavoriteButton
+                                propertyId={property.id}
+                                initialFavorite={favoriteIds.has(property.id)}
+                                isAuthenticated={Boolean(
+                                  viewer.isAuthenticated,
+                                )}
+                                isBuyer={Boolean(viewer.isBuyer)}
+                                isActive={viewer.isActive !== false}
+                                accountStatus={viewer.status ?? null}
+                                loginHref={loginHref}
+                                compact
+                                className="absolute right-1.5 top-1.5 z-10"
+                              />
+                            </div>
+                            <div className="flex flex-1 flex-col justify-center p-4">
+                              <span className="font-sans text-[9.5px] font-bold uppercase tracking-[0.12em] text-[#b39556]">
+                                Tipe {property.buildingArea}/
+                                {property.landArea}
+                              </span>
+                              <h3 className="mt-1 font-sans text-[15px] font-bold text-[#0d3b2e]">
+                                {property.title}
+                              </h3>
+                              <p className="mt-1 font-sans text-[10.5px] leading-snug text-gray-500">
+                                {`LB ${property.buildingArea} m\u00b2 / LT ${property.landArea} m\u00b2 \u00b7 ${property.bedrooms} Kamar Tidur \u00b7 ${property.bathrooms} Kamar Mandi`}
+                              </p>
+                              <div className="mt-2 flex items-center justify-between gap-2">
+                                <span className="font-sans text-[12px] font-bold tabular-nums text-[#0d3b2e]">
+                                  {formatRupiahShort(property.price)}
+                                </span>
+                                <a
+                                  href="#galeri"
+                                  className="font-sans text-[10px] font-bold uppercase tracking-[0.08em] text-[#b39556] no-underline hover:text-[#0d3b2e]"
+                                >
+                                  Lihat Denah →
+                                </a>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    </article>
-                  </li>
-                ))}
-              </ul>
+                        </article>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
 
               <p className="mt-4 font-sans text-[9.5px] text-white/40">
                 {SPESIFIKASI.footnote}

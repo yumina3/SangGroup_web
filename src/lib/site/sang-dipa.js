@@ -71,7 +71,7 @@ export const SPESIFIKASI = {
   titleMaterial: "Material & Konstruksi SNI",
   titleTypes: "Hunian Luas & Nyaman",
   intro:
-    "Tersedia 3 pilihan tipe hunian eksklusif yang dirancang adaptif terhadap topografi perbukitan dan sirkulasi udara alami:",
+    "Tersedia pilihan tipe hunian eksklusif yang dirancang adaptif terhadap topografi perbukitan dan sirkulasi udara alami:",
   materials: [
     { no: "01", label: "Pondasi", value: "Tiang Pancang Mini Pile & Batu Kali" },
     { no: "02", label: "Struktur", value: "Beton Bertulang Standar SNI" },

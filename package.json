@@ -9,10 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
     "@supabase/supabase-js": "^2.118.0",
     "leaflet": "^1.9.4",
     "next": "16.4.3",
+    "pg": "^8.23.1",
     "pino": "^10.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"
