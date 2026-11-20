@@ -4,6 +4,11 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 
 import { logAuth } from "@/lib/logging/logger";
+import {
+  createSupabaseServerClient,
+  isSupabaseConfigured,
+} from "@/lib/supabase/server";
+import { getCurrentUser } from "./current-user";
 import { findProfileById } from "./profile";
 import {
   DASHBOARD_BY_ROLE,
@@ -13,35 +18,56 @@ import {
   SESSION_DEFAULT_MAX_AGE,
   SESSION_REMEMBER_MAX_AGE,
   clearSessionCookie,
-  readSessionCookie,
-  writeSessionCookie,
 } from "./session-cookie";
 
 /**
- * Data Access Layer sesi. Satu tempat untuk membaca profil yang sedang login,
- * membuat sesi, dan menjaga rute dashboard.
+ * Data Access Layer sesi.
+ *
+ * Sumber kebenaran sesi adalah cookie Supabase Auth (@supabase/ssr), bukan
+ * cookie aplikasi buatan sendiri. Fungsi di file ini dipertahankan supaya
+ * seluruh halaman (3 portal login, layout dashboard, navbar) tidak perlu
+ * diubah saat backend digabung.
  */
 
-/** Profil aktif yang sedang login, atau null bila belum/tidak valid. */
+/**
+ * Profil aktif yang sedang login, atau null bila belum/tidak valid.
+ *
+ * `getCurrentUser()` memeriksa sesi Supabase di server. Setelah itu profil
+ * aplikasi dibaca lagi lewat `findProfileById()` agar bentuk hasil tetap
+ * mengandung `email`, `agencyName`, dan `status` turunan yang dipakai UI.
+ */
 export const getSessionProfile = cache(async () => {
-  const session = await readSessionCookie();
-  if (!session) return null;
+  const user = await getCurrentUser();
+  if (!user) return null;
 
-  const result = await findProfileById(session.userId);
-  if (!result.ok) return null;
-  if (!result.profile) return null;
+  const result = await findProfileById(user.id);
+  if (!result.ok || !result.profile) return null;
 
   return result.profile;
 });
 
-/** Tulis sesi setelah kredensial diverifikasi Supabase Auth. */
+/**
+ * Sesi Supabase sudah ditulis oleh `signInWithPassword()` / `signUpAccount()`.
+ * Fungsi ini sengaja hanya mencatat audit agar pemanggil lama tetap bekerja.
+ */
 export async function createSessionForProfile(profile, { remember = false } = {}) {
-  const maxAge = remember ? SESSION_REMEMBER_MAX_AGE : SESSION_DEFAULT_MAX_AGE;
-  await writeSessionCookie({ userId: profile.id, maxAge });
-  logAuth("session_created", { userId: profile.id, role: profile.role });
+  logAuth("session_created", {
+    userId: profile.id,
+    role: profile.role,
+    remember,
+  });
 }
 
+/** Keluar dari Supabase Auth dan hapus cookie aplikasi warisan bila ada. */
 export async function destroySession() {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = await createSupabaseServerClient();
+      await supabase.auth.signOut();
+    } catch {
+      // Supabase belum bisa dijangkau; cookie lokal tetap dibersihkan.
+    }
+  }
   await clearSessionCookie();
 }
 

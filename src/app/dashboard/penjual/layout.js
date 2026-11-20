@@ -19,7 +19,7 @@ export default async function AgentLayout({ children }) {
 
   // Data contoh dashboard tetap dipakai sampai modul properti tersambung,
   // tetapi identitas yang tampil diambil dari profil yang sedang login.
-  const demoAgent = getAgentDashboard().agent;
+  const demoAgent = (await getAgentDashboard()).agent;
   const agent = {
     ...demoAgent,
     id: profile.id,

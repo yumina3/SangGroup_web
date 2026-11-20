@@ -1,0 +1,76 @@
+# Infrastruktur lokal SANG Group: PostgreSQL, Redis (antrean), MinIO (object storage).
+# Jalankan:  docker compose up -d
+# Lalu:      npm run db:migrate && npm run db:seed && npm run dev
+# Worker:    npm run worker
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sang-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sang_group
+    ports:
+      - "5432:5432"
+    volumes:
+      - sang_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sang_group"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: sang-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - sang_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: sang-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: sangminio
+      MINIO_ROOT_PASSWORD: sangminio123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - sang_miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Membuat bucket foto properti sekali saat stack pertama kali dijalankan.
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set sang http://minio:9000 sangminio sangminio123 &&
+      mc mb --ignore-existing sang/sang-properties &&
+      mc anonymous set none sang/sang-properties &&
+      echo 'Bucket sang-properties siap.'
+      "
+
+volumes:
+  sang_pgdata:
+  sang_redisdata:
+  sang_miniodata:

@@ -1,34 +1,17 @@
 import { CONTACT_STATUS, getAgentContacts } from "./contact-data";
+import { formatLongDate, formatTime } from "./format";
 
 /**
- * Data demo percakapan halaman Pesan.
+ * Percakapan halaman Pesan.
  *
  * Satu percakapan selalu terhubung ke satu kontak di `contact-data.js`,
  * sehingga tombol "Kirim Pesan" dari halaman Kontak membuka percakapan yang
- * benar. Isi pesan sengaja disimpan terpisah dari kontak karena nanti berasal
- * dari tabel pesan tersendiri di database.
- *
- * Semua pesan yang dikirim dari layar hanya menjadi pratinjau lokal sampai
- * modul database pesan tersambung.
+ * benar. Identitas kontak dan riwayat pengajuan berasal dari database;
+ * template balasan dan pesan yang dikirim dari layar tetap menjadi pratinjau
+ * lokal karena schema belum memiliki tabel pesan.
  */
 
-export const MESSAGE_QUICK_REPLIES = [
-  {
-    id: "jadwal",
-    label: "Jadwalkan kunjungan",
-    text: "Baik, jadwal kunjungan sudah kami catat. Tim marketing gallery akan menyiapkan denah dan simulasi KPR.",
-  },
-  {
-    id: "brosur",
-    label: "Kirim brosur",
-    text: "Berikut kami lampirkan e-brosur resmi kawasan beserta spesifikasi material unit yang Anda minati.",
-  },
-  {
-    id: "anggaran",
-    label: "Tanya anggaran",
-    text: "Berapa estimasi alokasi DP dan target tenor cicilan KPR yang Anda prioritaskan?",
-  },
-];
+export { MESSAGE_QUICK_REPLIES } from "./ui-constants";
 
 /**
  * @typedef {object} AgentConversation
@@ -310,25 +293,112 @@ const CONVERSATION_SPECS = [
   },
 ];
 
+const NOTE_TONE_BY_STATUS = {
+  DEAL: "gold",
+  SELESAI: "gold",
+  DIJADWALKAN: "available",
+  NEGOSIASI: "gold",
+  BATAL: "danger",
+};
+
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+
+function activeLabelFor(value) {
+  const elapsed = Date.now() - new Date(value).getTime();
+  if (!Number.isFinite(elapsed) || elapsed < MINUTE) return "Baru saja";
+  if (elapsed < HOUR) return `Aktif ${Math.floor(elapsed / MINUTE)} menit lalu`;
+  if (elapsed < DAY) return `Aktif ${Math.floor(elapsed / HOUR)} jam lalu`;
+  if (elapsed < 7 * DAY) return `Aktif ${Math.floor(elapsed / DAY)} hari lalu`;
+  return `Aktif ${formatLongDate(value)}`;
+}
+
+function shortTime(value) {
+  return formatTime(value).replace(" WIB", "");
+}
+
+function noteFor(contact) {
+  if (contact.status === "DEAL" || contact.status === "SELESAI") return "Deal tercatat";
+  if (contact.status === "BATAL") return "Pengajuan dibatalkan";
+  return [contact.property?.cluster, contact.property?.unit].filter(Boolean).join(" • ") || "—";
+}
+
+/**
+ * Percakapan dibuat dari riwayat pengajuan kontak (data persisten).
+ * Balasan agen memakai template singkat karena tabel pesan belum ada di schema.
+ */
+function messagesForContact(contact) {
+  const activities = [...(contact.history ?? [])].reverse();
+  const messages = [];
+
+  for (const activity of activities) {
+    const at = new Date(activity.at);
+    messages.push({
+      id: `msg-${activity.id}`,
+      from: "buyer",
+      body: activity.note || `${activity.title} — ${activity.propertyLabel}`,
+      timeLabel: formatTime(at),
+    });
+
+    if (activity.status === "BARU" || activity.status === "DIJADWALKAN") {
+      messages.push({
+        id: `msg-${activity.id}-reply`,
+        from: "agent",
+        body:
+          activity.status === "DIJADWALKAN"
+            ? "Jadwal kunjungan sudah kami catat. Tim marketing gallery akan menyiapkan denah dan simulasi KPR."
+            : "Terima kasih atas minat Anda. Tim kami akan segera menghubungi untuk detail kunjungan dan simulasi KPR.",
+        timeLabel: formatTime(new Date(at.getTime() + 15 * MINUTE)),
+        status: "read",
+      });
+    }
+  }
+
+  if (messages.length === 0) {
+    messages.push({
+      id: `msg-${contact.id}`,
+      from: "buyer",
+      body: "Saya tertarik dengan properti ini.",
+      timeLabel: formatTime(contact.lastInteractionAt),
+    });
+  }
+
+  return messages;
+}
+
 /**
  * Daftar percakapan lengkap dengan identitas kontak dan properti.
- * @returns {AgentConversation[]}
+ *
+ * Kontak berasal dari `getAgentContacts()` (pengajuan nyata milik agen).
+ * Spesifikasi demo dipakai hanya bila id kontaknya cocok, supaya tampilan
+ * contoh tetap lengkap saat aplikasi dijalankan tanpa database.
+ *
+ * @returns {Promise<AgentConversation[]>}
  */
-export function getAgentConversations() {
-  const contacts = new Map(getAgentContacts().map((contact) => [contact.id, contact]));
+export async function getAgentConversations() {
+  const contacts = await getAgentContacts();
+  const specs = new Map(CONVERSATION_SPECS.map((spec) => [spec.contactId, spec]));
 
-  return CONVERSATION_SPECS.map((spec) => {
-    const contact = contacts.get(spec.contactId);
-    if (!contact) return null;
-
+  return contacts.map((contact) => {
     const status = CONTACT_STATUS[contact.status] ?? CONTACT_STATUS.BARU;
-    const lastMessage = spec.messages[spec.messages.length - 1];
+    const spec = specs.get(contact.id);
+    const messages = spec?.messages ?? messagesForContact(contact);
+    const lastMessage = messages[messages.length - 1];
 
     return {
-      ...spec,
+      id: spec?.id ?? `conv-${contact.id}`,
+      contactId: contact.id,
+      unread: spec?.unread ?? contact.status === "BARU",
+      activeLabel: spec?.activeLabel ?? activeLabelFor(contact.lastInteractionAt),
+      lastMessageLabel: spec?.lastMessageLabel ?? shortTime(contact.lastInteractionAt),
+      dateLabel: spec?.dateLabel ?? formatLongDate(contact.lastInteractionAt),
+      note: spec?.note ?? noteFor(contact),
+      noteTone: spec?.noteTone ?? NOTE_TONE_BY_STATUS[contact.status] ?? "default",
+      messages,
       name: contact.name,
       phone: contact.phone,
-      email: contact.email,
+      email: contact.email || "—",
       city: contact.city,
       status: contact.status,
       statusLabel: status.label,
@@ -336,5 +406,5 @@ export function getAgentConversations() {
       property: contact.property,
       preview: lastMessage?.body ?? "",
     };
-  }).filter(Boolean);
+  });
 }

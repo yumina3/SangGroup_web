@@ -8,13 +8,13 @@ export const metadata = { title: "Pesan" };
  *
  * Navbar dan sidebar dipasang sekali oleh `src/app/dashboard/penjual/layout.js`.
  * `?contact=` dari halaman Kontak memilih percakapan yang sesuai saat
- * halaman dibuka. Data percakapan masih demo internal dan nanti diambil dari
- * tabel pesan di database.
+ * halaman dibuka. Identitas/riwayat berasal dari pengajuan nyata; isi balasan
+ * masih template karena schema belum memiliki tabel pesan.
  */
 export default async function MessagesPage({ searchParams }) {
   const params = (await searchParams) ?? {};
   const initialContactId = typeof params.contact === "string" ? params.contact : null;
-  const conversations = getAgentConversations();
+  const conversations = await getAgentConversations();
 
   return (
     <MessagesWorkspace conversations={conversations} initialContactId={initialContactId} />

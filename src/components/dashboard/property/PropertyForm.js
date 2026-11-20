@@ -13,7 +13,7 @@ import PropertyField, {
   PropertySelect,
   PropertyTextarea,
 } from "@/components/dashboard/property/PropertyField";
-import { AGENT_CATEGORY_OPTIONS } from "@/lib/dashboard/agent-data";
+import { AGENT_CATEGORY_OPTIONS } from "@/lib/dashboard/ui-constants";
 import { formatRupiah } from "@/lib/dashboard/format";
 import {
   changedKeyFields,

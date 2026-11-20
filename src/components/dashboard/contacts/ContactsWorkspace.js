@@ -15,7 +15,7 @@ import {
   IconMessage,
   IconSearch,
 } from "@/components/dashboard/icons";
-import { CONTACT_STATUS, CONTACT_STATUS_OPTIONS } from "@/lib/dashboard/contact-data";
+import { CONTACT_STATUS, CONTACT_STATUS_OPTIONS } from "@/lib/dashboard/ui-constants";
 import {
   formatDate,
   formatDateTime,

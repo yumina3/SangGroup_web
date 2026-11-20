@@ -10,8 +10,17 @@ import AgentAvatar from "@/components/dashboard/AgentAvatar";
 import { IconExit } from "@/components/dashboard/icons";
 import PropertyField from "@/components/dashboard/property/PropertyField";
 import { useToast } from "@/components/dashboard/Toast";
-import { getAgentDashboard } from "@/lib/dashboard/agent-data";
 import { agentLogoutAction } from "@/app/(auth)/logout/actions";
+
+const DEFAULT_AGENT = {
+  id: "",
+  name: "Agen Sang Group",
+  email: "",
+  phone: "",
+  agencyName: "SANG Group",
+  agentCode: "-",
+  avatarUrl: null,
+};
 
 const TABS = [
   { key: "profil", label: "Profil" },
@@ -56,8 +65,10 @@ const NOTIFICATIONS = [
  * `initialTab` boleh diisi dari halaman (`?tab=keamanan`) supaya tautan dari
  * menu profil langsung membuka bagian yang dituju.
  */
-export default function PengaturanPenjual({ initialTab = "profil" }) {
-  const { agent } = getAgentDashboard();
+export default function PengaturanPenjual({
+  initialTab = "profil",
+  agent = DEFAULT_AGENT,
+}) {
   const [tab, setTab] = useState(TABS.some((item) => item.key === initialTab) ? initialTab : "profil");
 
   return (

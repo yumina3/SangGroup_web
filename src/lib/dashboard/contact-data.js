@@ -1,35 +1,24 @@
 /**
- * Data demo halaman Kontak dashboard agen.
+ * Data halaman Kontak dashboard agen.
  *
- * Bentuk data dibuat sama dengan yang nanti dihasilkan query database:
- * satu baris kontak berisi identitas calon pembeli, properti terakhir yang
+ * Satu baris kontak berisi identitas calon pembeli, properti terakhir yang
  * diminati, status interaksi, dan riwayat aktivitas. Halaman Kontak dan Pesan
  * sama-sama membaca kontak dari sini supaya nama, nomor, dan properti tidak
  * berbeda antarhalaman.
  *
- * Saat modul database tersambung, `getAgentContacts()` cukup diganti query
- * Prisma yang dibatasi `sellerId` agen yang sedang login.
+ * Kontak diturunkan dari `property_inquiries` milik agen yang sedang login;
+ * tidak ada tabel kontak tersendiri. Data contoh dipakai hanya bila sesi/DB
+ * belum tersedia.
  */
 
-export const CONTACT_STATUS = {
-  BARU: { label: "Baru", tone: "warning" },
-  KONSULTASI: { label: "Konsultasi", tone: "info" },
-  DIJADWALKAN: { label: "Dijadwalkan", tone: "info" },
-  NEGOSIASI: { label: "Negosiasi", tone: "gold" },
-  DEAL: { label: "Deal", tone: "success" },
-  SELESAI: { label: "Selesai", tone: "neutral" },
-  BATAL: { label: "Batal", tone: "danger" },
-};
+import { getAgentDashboard } from "./agent-data";
+import { CONTACT_STATUS } from "./ui-constants";
 
-const FILTER_STATUS = ["BARU", "KONSULTASI", "DIJADWALKAN", "NEGOSIASI", "DEAL", "BATAL"];
-
-export const CONTACT_STATUS_OPTIONS = [
-  { value: "ALL", label: "Semua Status" },
-  ...FILTER_STATUS.map((key) => ({ value: key, label: CONTACT_STATUS[key].label })),
-];
-
-/** Waktu sinkronisasi contoh. Nanti diisi waktu query terakhir ke database. */
-export const CONTACT_LAST_SYNC = "2026-11-04T02:45:00.000Z";
+export {
+  CONTACT_STATUS,
+  CONTACT_STATUS_OPTIONS,
+  CONTACT_LAST_SYNC,
+} from "./ui-constants";
 
 /**
  * @typedef {object} AgentContact
@@ -356,12 +345,76 @@ const CONTACTS = [
   },
 ];
 
+/** Pemetaan status pengajuan SRS ke status kontak yang dipakai UI. */
+const INQUIRY_TO_CONTACT_STATUS = {
+  PENDING: "BARU",
+  CONFIRMED: "DIJADWALKAN",
+  RESCHEDULED: "KONSULTASI",
+  COMPLETED: "DEAL",
+  CANCELLED: "BATAL",
+  REJECTED: "BATAL",
+};
+
 /**
  * Daftar kontak, terbaru lebih dulu.
- * @returns {AgentContact[]}
+ *
+ * Kontak tidak punya tabel tersendiri: satu kontak adalah pengelompokan
+ * pengajuan per pembeli atas listing milik agen yang sedang login.
+ *
+ * @returns {Promise<AgentContact[]>}
  */
-export function getAgentContacts() {
-  return [...CONTACTS].sort(
+export async function getAgentContacts() {
+  const { inquiries } = await getAgentDashboard();
+  if (inquiries.length === 0) {
+    return [...CONTACTS].sort(
+      (a, b) => new Date(b.lastInteractionAt) - new Date(a.lastInteractionAt),
+    );
+  }
+
+  const groups = new Map();
+  for (const inquiry of inquiries) {
+    const key = inquiry.buyer.id;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(inquiry);
+  }
+
+  const contacts = [...groups.entries()].map(([buyerId, items]) => {
+    const latest = items[0];
+    const status = INQUIRY_TO_CONTACT_STATUS[latest.status] ?? "BARU";
+    const scoreValue = Math.min(99, 55 + items.length * 12);
+
+    return {
+      id: `ctc-${buyerId}`,
+      buyerId,
+      name: latest.buyer.name,
+      phone: latest.buyer.phone || "—",
+      email: latest.buyer.email || "—",
+      city: latest.property.cluster || "Semarang",
+      source: "Portal Web GIS SANG Group",
+      score: `${status === "DEAL" ? "Tinggi" : "Sedang"} (${scoreValue}%)`,
+      scoreTone: status === "DEAL" ? "gold" : "info",
+      status,
+      lastInteractionAt: latest.createdAt,
+      property: {
+        id: latest.property.id,
+        title: latest.property.title,
+        cluster: latest.property.cluster || "—",
+        unit: latest.property.unit || "—",
+        price: latest.property.price,
+      },
+      history: items.map((item) => ({
+        id: `act-${item.id}`,
+        at: item.createdAt,
+        status: INQUIRY_TO_CONTACT_STATUS[item.status] ?? "BARU",
+        title:
+          item.type === "VISIT" ? "Pengajuan Kunjungan Lapangan" : "Pengajuan Minat Beli",
+        propertyLabel: `${item.property.title} (${item.property.cluster || "—"} · Unit ${item.property.unit || "—"})`,
+        note: item.message || item.sellerNote || "",
+      })),
+    };
+  });
+
+  return contacts.sort(
     (a, b) => new Date(b.lastInteractionAt) - new Date(a.lastInteractionAt),
   );
 }

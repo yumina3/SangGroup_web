@@ -9,6 +9,7 @@ export const metadata = { title: "Analitik Penjualan" };
  * Layout dashboard sudah memasang navbar bersama; halaman ini hanya
  * menyiapkan data demo per periode lalu menyerahkannya ke workspace klien.
  */
-export default function SalesAnalyticsPage() {
-  return <SalesAnalyticsWorkspace datasets={getSalesAnalyticsDatasets()} />;
+export default async function SalesAnalyticsPage() {
+  const datasets = await getSalesAnalyticsDatasets();
+  return <SalesAnalyticsWorkspace datasets={datasets} />;
 }

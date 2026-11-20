@@ -19,7 +19,7 @@ import {
   IconTarget,
   IconWallet,
 } from "@/components/dashboard/icons";
-import { ANALYTICS_PERIODS } from "@/lib/dashboard/analytics-data";
+import { ANALYTICS_PERIODS } from "@/lib/dashboard/ui-constants";
 import { downloadCsv } from "@/lib/dashboard/csv";
 import { formatRupiah } from "@/lib/dashboard/format";
 

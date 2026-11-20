@@ -19,17 +19,17 @@ export const instant = false;
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
-  const property = findProperty(id);
+  const property = await findProperty(id);
   return { title: property ? `Ubah — ${property.title}` : "Ubah Properti" };
 }
 
-function findProperty(id) {
-  return getAgentDashboard().properties.find((item) => item.id === id) ?? null;
+async function findProperty(id) {
+  return (await getAgentDashboard()).properties.find((item) => item.id === id) ?? null;
 }
 
 export default async function EditPropertyPage({ params }) {
   const { id } = await params;
-  const property = findProperty(id);
+  const property = await findProperty(id);
 
   if (!property) {
     return (

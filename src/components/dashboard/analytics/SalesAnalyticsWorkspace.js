@@ -19,7 +19,7 @@ import {
   IconDownload,
   IconSparkles,
 } from "@/components/dashboard/icons";
-import { ANALYTICS_PERIODS } from "@/lib/dashboard/analytics-data";
+import { ANALYTICS_PERIODS } from "@/lib/dashboard/ui-constants";
 import { downloadCsv } from "@/lib/dashboard/csv";
 
 const PAGE_SIZE = 5;

@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
 import PengaturanPenjual from "@/components/dashboard/settings/PengaturanPenjual";
+import { getAgentDashboard } from "@/lib/dashboard/agent-data";
 
 export const metadata = { title: "Pengaturan" };
 
@@ -22,5 +23,6 @@ export default function AgentSettingsPage({ searchParams }) {
 async function SettingsSection({ searchParams }) {
   const params = (await searchParams) ?? {};
   const tab = typeof params.tab === "string" ? params.tab : "profil";
-  return <PengaturanPenjual initialTab={tab} />;
+  const { agent } = await getAgentDashboard();
+  return <PengaturanPenjual initialTab={tab} agent={agent} />;
 }

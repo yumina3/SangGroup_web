@@ -46,7 +46,7 @@ export default function AgentPropertiesPage({ searchParams }) {
 async function PropertyListSection({ searchParams }) {
   const params = (await searchParams) ?? {};
   const query = parsePropertyQuery(params);
-  const { properties } = getAgentDashboard();
+  const { properties } = await getAgentDashboard();
 
   const filtered = filterProperties(properties, query);
   const result = paginate(filtered, query.page);

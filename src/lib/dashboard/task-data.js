@@ -1,4 +1,8 @@
 import { formatDate, jakartaDayKey } from "@/lib/dashboard/format";
+import { getAgentDashboard } from "./agent-data";
+import { TASK_TYPES } from "./ui-constants";
+
+export { TASK_TYPES } from "./ui-constants";
 
 /**
  * Tugas tindak lanjut (demo, hanya-baca).
@@ -11,12 +15,6 @@ import { formatDate, jakartaDayKey } from "@/lib/dashboard/format";
  */
 
 const ZONE = "Asia/Jakarta";
-
-export const TASK_TYPES = {
-  CONTACT: { label: "Hubungi", tone: "success" },
-  VISIT: { label: "Kunjungan", tone: "warning" },
-  DOCUMENT: { label: "Dokumen", tone: "info" },
-};
 
 const TASK_DEFINITIONS = [
   {
@@ -268,17 +266,20 @@ export function taskDueLabel(dueAt, now = new Date(), done = false) {
  *
  * @param {Date} now
  */
-export function getAgentTasks(now = new Date()) {
+function buildTasks(definitions, now) {
   const todayKey = jakartaDayKey(now);
   const currentMonth = jakartaMonthKey(now);
 
-  const tasks = TASK_DEFINITIONS.map((task) => {
-    const dueAt = isoAtOffset(now, task.dueOffsetDays, task.dueTime);
+  const tasks = definitions.map((task) => {
+    const dueAt =
+      task.dueAt ?? isoAtOffset(now, task.dueOffsetDays ?? 0, task.dueTime ?? "09:00");
     const done = task.status === "DONE";
-    const completedAt =
-      done && typeof task.completedOffsetDays === "number"
-        ? isoAtOffset(now, task.completedOffsetDays, task.completedTime ?? "09:00")
-        : null;
+    const completedAt = done
+      ? (task.completedAt ??
+        (typeof task.completedOffsetDays === "number"
+          ? isoAtOffset(now, task.completedOffsetDays, task.completedTime ?? "09:00")
+          : null))
+      : null;
     const dueKey = jakartaDayKey(dueAt);
     const overdue = !done && new Date(dueAt).getTime() < now.getTime();
 
@@ -318,4 +319,40 @@ export function getAgentTasks(now = new Date()) {
   });
 
   return { tasks: sorted, counts };
+}
+
+const DAY = 86_400_000;
+
+/** Tugas dibuat dari pengajuan nyata milik agen yang sedang login. */
+export async function getAgentTasks(now = new Date()) {
+  const { inquiries } = await getAgentDashboard();
+
+  // Belum ada sesi/DB: tampilkan contoh agar UI tetap bisa dipelajari.
+  if (inquiries.length === 0) return buildTasks(TASK_DEFINITIONS, now);
+
+  const definitions = inquiries.map((inquiry, index) => {
+    const done = ["COMPLETED", "CANCELLED", "REJECTED"].includes(inquiry.status);
+    const created = new Date(inquiry.createdAt).getTime();
+    const dueAt = new Date(created + 2 * DAY).toISOString();
+    const type = inquiry.type === "VISIT" ? "VISIT" : index % 2 === 0 ? "CONTACT" : "DOCUMENT";
+
+    return {
+      id: `tsk-${inquiry.id}`,
+      title:
+        type === "VISIT"
+          ? `Siapkan kunjungan ${inquiry.buyer.name}`
+          : `Tindak lanjut ${inquiry.buyer.name}`,
+      type,
+      buyerName: inquiry.buyer.name,
+      propertyTitle: inquiry.property.title,
+      unit: [inquiry.property.cluster, inquiry.property.unit].filter(Boolean).join(" · ") || "—",
+      inquiryId: inquiry.id,
+      dueAt,
+      completedAt: done ? new Date(created + DAY).toISOString() : null,
+      status: done ? "DONE" : "OPEN",
+      note: inquiry.sellerNote || inquiry.message || "Periksa detail pengajuan.",
+    };
+  });
+
+  return buildTasks(definitions, now);
 }

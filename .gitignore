@@ -32,7 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
-.env.example
+!.env.example
 
 # vercel
 .vercel
@@ -43,8 +43,7 @@ next-env.d.ts
 
 /src/generated/prisma
 
-# documentation
-/docs/
+# documentation/docs tetap masuk repo
 
 # log hasil build dan script sementara (jangan masuk repo)
 build*.log
@@ -52,6 +51,7 @@ build*.log
 fix-encoding.py
 dev.log
 dev-penjual3.log
+moji.txt
 
 # data lokal / editor
 .idea/

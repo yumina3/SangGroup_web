@@ -19,7 +19,7 @@ import {
   IconSend,
 } from "@/components/dashboard/icons";
 import { formatRupiah, initialsOf } from "@/lib/dashboard/format";
-import { MESSAGE_QUICK_REPLIES } from "@/lib/dashboard/message-data";
+import { MESSAGE_QUICK_REPLIES } from "@/lib/dashboard/ui-constants";
 
 const AVATAR_TONE = {
   BARU: "bg-ag-forest text-white",

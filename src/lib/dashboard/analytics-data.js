@@ -9,13 +9,18 @@
  *
  * Semua nilai yang dikirim ke client harus serializable (string/angka/array/
  * objek biasa). Ikon disimpan sebagai kunci string, bukan komponen React.
+ *
+ * Sejak modul backend digabung, angka KPI/target/properties diganti dengan
+ * agregat data milik agen yang sedang login. Dataset statis di bawah tetap
+ * dipakai sebagai fallback bila sesi/DB belum tersedia.
  */
 
-export const ANALYTICS_PERIODS = [
-  { value: "month", label: "Bulan Ini (Okt 2026)" },
-  { value: "quarter", label: "3 Bulan Terakhir" },
-  { value: "year", label: "Tahun Ini (2026)" },
-];
+import { getAgentDashboard } from "./agent-data";
+import { formatDate, formatRupiahShort, formatTime } from "./format";
+import { INQUIRY_STATUS, SALE_STATUS } from "./status-labels";
+import { ANALYTICS_PERIODS } from "./ui-constants";
+
+export { ANALYTICS_PERIODS } from "./ui-constants";
 
 const PERIOD_META = {
   month: {
@@ -695,16 +700,254 @@ function buildPerformanceDataset(period) {
   };
 }
 
-/** @returns {Record<string, ReturnType<typeof buildSalesDataset>>} */
-export function getSalesAnalyticsDatasets() {
-  return Object.fromEntries(
-    ANALYTICS_PERIODS.map(({ value }) => [value, buildSalesDataset(value)]),
-  );
+// --- Agregat data nyata ---------------------------------------------------
+
+const MONTH_LABEL = new Intl.DateTimeFormat("id-ID", {
+  month: "short",
+  timeZone: "Asia/Jakarta",
+});
+
+function inPeriod(value, period, now) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+
+  if (period === "month") {
+    return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+  }
+  if (period === "year") return date.getFullYear() === now.getFullYear();
+
+  const cutoff = new Date(now);
+  cutoff.setMonth(cutoff.getMonth() - 3);
+  return date >= cutoff;
 }
 
-/** @returns {Record<string, ReturnType<typeof buildPerformanceDataset>>} */
-export function getAgentPerformanceDatasets() {
-  return Object.fromEntries(
+function aggregatesFor(dashboard, period, now) {
+  const properties = dashboard.properties.filter((item) => inPeriod(item.updatedAt, period, now));
+  const inquiries = dashboard.inquiries.filter((item) => inPeriod(item.createdAt, period, now));
+  const sold = properties.filter((item) => item.saleStatus === "SOLD");
+
+  return {
+    properties,
+    inquiries,
+    sold,
+    soldValue: sold.reduce((sum, item) => sum + (item.price ?? 0), 0),
+  };
+}
+
+function monthlySeries(inquiries, period, now) {
+  const length = period === "quarter" ? 3 : period === "year" ? 10 : 6;
+  const months = [];
+
+  for (let offset = length - 1; offset >= 0; offset -= 1) {
+    const date = new Date(now);
+    date.setDate(1);
+    date.setMonth(date.getMonth() - offset);
+    months.push({
+      key: `${date.getFullYear()}-${date.getMonth()}`,
+      label: MONTH_LABEL.format(date),
+      value: 0,
+    });
+  }
+
+  for (const inquiry of inquiries) {
+    const date = new Date(inquiry.createdAt);
+    const entry = months.find(
+      (month) => month.key === `${date.getFullYear()}-${date.getMonth()}`,
+    );
+    if (entry) entry.value += 1;
+  }
+
+  const peak = Math.max(...months.map((month) => month.value));
+
+  return {
+    labels: months.map((month) => month.label),
+    values: months.map((month) => month.value),
+    peak: peak > 0 ? `Puncak: ${peak} Pengajuan` : "Belum ada pengajuan pada periode ini",
+    insight: "Data pengajuan dari database Sang Group",
+    conversionNote: "Dihitung dari pengajuan yang tersimpan",
+  };
+}
+
+function clusterSeries(inquiries) {
+  const counts = new Map();
+  for (const inquiry of inquiries) {
+    const name = inquiry.property?.cluster || "Lainnya";
+    counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
+
+  const tones = ["forest", "gold", "medium"];
+  const items = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([name, count], index) => ({
+      name,
+      area: "SANG Group",
+      count,
+      percent: inquiries.length ? Math.round((count / inquiries.length) * 100) : 0,
+      tone: tones[index] ?? "medium",
+      best: index === 0,
+    }));
+
+  return {
+    total: inquiries.length,
+    items,
+    note: "Distribusi pengajuan dari database",
+  };
+}
+
+function realProperties(properties, inquiries) {
+  return properties
+    .map((item) => {
+      const related = inquiries.filter((inquiry) => inquiry.property.id === item.id);
+      const visits = related.filter((inquiry) => inquiry.type === "VISIT").length;
+      const sale = SALE_STATUS[item.saleStatus] ?? { label: item.saleStatus, tone: "neutral" };
+
+      return {
+        id: item.id,
+        title: item.title,
+        unit: item.unit || "—",
+        area:
+          [item.landArea, item.buildingArea]
+            .filter(Boolean)
+            .map((size) => `${size} m²`)
+            .join(" / ") || "—",
+        cluster: item.cluster || "—",
+        location: item.city || item.cluster || "—",
+        statusLabel: sale.label,
+        statusTone: sale.tone,
+        inquiries: related.length,
+        visits,
+        conversion: related.length ? Math.round((visits / related.length) * 100) : 0,
+      };
+    })
+    .sort((a, b) => b.inquiries - a.inquiries)
+    .slice(0, 7);
+}
+
+function realActivities(inquiries) {
+  return inquiries.slice(0, 7).map((inquiry) => {
+    const status = INQUIRY_STATUS[inquiry.status] ?? { label: inquiry.status, tone: "neutral" };
+    return {
+      id: `act-${inquiry.id}`,
+      date: `${formatDate(inquiry.createdAt)} · ${formatTime(inquiry.createdAt)}`,
+      title: `${status.label} — ${inquiry.buyer.name}`,
+      location: `${inquiry.property.cluster || "—"} (${inquiry.property.unit || "—"})`,
+      statusLabel: status.label,
+      statusTone: status.tone,
+      dotTone: status.tone === "danger" ? "red" : status.tone === "success" ? "green" : "slate",
+    };
+  });
+}
+
+function hasDashboardData(dashboard) {
+  return dashboard.properties.length > 0 || dashboard.inquiries.length > 0;
+}
+
+/** @returns {Promise<Record<string, ReturnType<typeof buildSalesDataset>>>} */
+export async function getSalesAnalyticsDatasets() {
+  const datasets = Object.fromEntries(
+    ANALYTICS_PERIODS.map(({ value }) => [value, buildSalesDataset(value)]),
+  );
+
+  const dashboard = await getAgentDashboard();
+  if (!hasDashboardData(dashboard)) return datasets;
+
+  const now = new Date();
+  for (const { value } of ANALYTICS_PERIODS) {
+    const { properties, inquiries, sold, soldValue } = aggregatesFor(dashboard, value, now);
+    const dataset = datasets[value];
+    const clusters = clusterSeries(inquiries);
+
+    dataset.kpis = dataset.kpis.map((kpi) => {
+      switch (kpi.key) {
+        case "inquiries":
+          return {
+            ...kpi,
+            value: String(inquiries.length),
+            note: "Data pengajuan dari database",
+            noteTone: "neutral",
+          };
+        case "deals":
+          return {
+            ...kpi,
+            value: String(sold.length),
+            note: "Listing berstatus terjual",
+            noteTone: "gold",
+          };
+        case "value":
+          return {
+            ...kpi,
+            value: formatRupiahShort(soldValue),
+            note: "Total nilai listing terjual",
+            noteTone: "positive",
+          };
+        default:
+          return kpi;
+      }
+    });
+
+    dataset.monthly = {
+      ...dataset.monthly,
+      ...monthlySeries(inquiries, value, now),
+    };
+    dataset.clusters = clusters.items;
+    dataset.clusterTotal = clusters.total;
+    dataset.consolidationNote = clusters.note;
+    dataset.properties = realProperties(properties, inquiries);
+    dataset.propertiesTotal = dataset.properties.length;
+    dataset.updatedLabel = "Data terkini dari database";
+  }
+
+  return datasets;
+}
+
+/** @returns {Promise<Record<string, ReturnType<typeof buildPerformanceDataset>>>} */
+export async function getAgentPerformanceDatasets() {
+  const datasets = Object.fromEntries(
     ANALYTICS_PERIODS.map(({ value }) => [value, buildPerformanceDataset(value)]),
   );
+
+  const dashboard = await getAgentDashboard();
+  if (!hasDashboardData(dashboard)) return datasets;
+
+  const now = new Date();
+  for (const { value } of ANALYTICS_PERIODS) {
+    const { inquiries, sold, soldValue } = aggregatesFor(dashboard, value, now);
+    const dataset = datasets[value];
+    const target = dataset.target;
+    const conversion = inquiries.length
+      ? Math.round((sold.length / inquiries.length) * 100)
+      : 0;
+    const visits = inquiries.filter((inquiry) => inquiry.type === "VISIT").length;
+
+    dataset.target = {
+      ...target,
+      achievedDeals: sold.length,
+      achievedValue: soldValue,
+      commission: Math.round(soldValue * 0.03),
+      note: sold.length
+        ? `${sold.length} listing terjual dari ${target.targetDeals} target periode ini.`
+        : "Belum ada deal tercatat pada periode ini.",
+      progress:
+        target.targetDeals > 0 ? Math.round((sold.length / target.targetDeals) * 100) : 0,
+      valueProgress:
+        target.targetValue > 0 ? Math.round((soldValue / target.targetValue) * 100) : 0,
+      remainingDeals: Math.max(target.targetDeals - sold.length, 0),
+    };
+
+    dataset.kpis = dataset.kpis.map((kpi) => {
+      if (kpi.key === "conversion") {
+        return { ...kpi, value: `${conversion}%`, note: `${sold.length} deal dari ${inquiries.length} pengajuan` };
+      }
+      if (kpi.key === "visits") {
+        return { ...kpi, value: String(visits), note: "Pengajuan kunjungan dari database" };
+      }
+      return kpi;
+    });
+
+    dataset.activities = realActivities(inquiries);
+    dataset.activityWindowLabel = "Aktivitas Terbaru";
+  }
+
+  return datasets;
 }

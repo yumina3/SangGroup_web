@@ -57,7 +57,7 @@ async function InquiriesContent({ searchParams }) {
   const query = parseInquiryQuery(params);
   const focusId = typeof params.id === "string" ? params.id : null;
 
-  const { properties, inquiries } = getAgentDashboard();
+  const { properties, inquiries } = await getAgentDashboard();
   const filtered = [...filterInquiries(inquiries, query)].sort(
     (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
   );

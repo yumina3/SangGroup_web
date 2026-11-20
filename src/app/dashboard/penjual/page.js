@@ -41,7 +41,7 @@ async function OverviewContent() {
   await connection();
 
   const now = new Date();
-  const { agent, properties, inquiries } = getAgentDashboard();
+  const { agent, properties, inquiries } = await getAgentDashboard();
   const summary = summarize(properties, inquiries, now);
   const rejected = latestRejected(properties);
   const recent = recentInquiries(inquiries, 5);

@@ -14,7 +14,7 @@ import {
   IconClock,
   IconSearch,
 } from "@/components/dashboard/icons";
-import { TASK_TYPES } from "@/lib/dashboard/task-data";
+import { TASK_TYPES } from "@/lib/dashboard/ui-constants";
 
 const TABS = [
   { key: "today", label: "Hari Ini" },

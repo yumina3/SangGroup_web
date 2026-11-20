@@ -1,13 +1,18 @@
 import "server-only";
 
-import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
 /**
  * Klien Supabase Auth untuk server.
  *
- * Supabase dipakai HANYA sebagai penyedia identitas (PRD §4.1). Data bisnis
- * tetap lewat Prisma. Selama env belum diisi, fungsi ini mengembalikan null
- * agar halaman auth menampilkan keadaan "belum dikonfigurasi", bukan error 500.
+ * Supabase dipakai sebagai penyedia identitas (SRS BR-03). Beda dengan versi
+ * sebelumnya yang memakai `createClient` tanpa penyimpanan sesi, klien ini
+ * memakai `@supabase/ssr` sehingga cookie sesi Supabase ditulis oleh Server
+ * Action / Route Handler. Cookie inilah yang dibaca `getCurrentUser()`通过
+ * `supabase.auth.getUser()` pada setiap permintaan (lihat current-user.js).
+ *
+ * Data bisnis tetap lewat Prisma; Supabase tidak dipakai untuk `from(...)`.
  */
 export function isAuthConfigured() {
   return Boolean(
@@ -16,24 +21,33 @@ export function isAuthConfigured() {
   );
 }
 
-function createAuthClient() {
+/** Klien Auth yang terikat cookie request saat ini. */
+export async function getAuthClient() {
   if (!isAuthConfigured()) return null;
 
-  return createClient(
+  const cookieStore = await cookies();
+
+  return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-        detectSessionInUrl: false,
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            for (const { name, value, options } of cookiesToSet) {
+              cookieStore.set(name, value, options);
+            }
+          } catch {
+            // Server Component tidak boleh menulis cookie; penyegaran token
+            // ditangani oleh proxy.
+          }
+        },
       },
     },
   );
-}
-
-export function getAuthClient() {
-  return createAuthClient();
 }
 
 /** Pesan Indonesia yang tidak membocorkan apakah sebuah email terdaftar. */
@@ -57,11 +71,11 @@ export function authErrorMessage(error) {
 }
 
 /**
- * Verifikasi email + kata sandi ke Supabase Auth.
+ * Verifikasi email + kata sandi ke Supabase Auth dan simpan sesinya di cookie.
  * @returns {{ ok: true, user: object } | { ok: false, message: string }}
  */
 export async function signInWithPassword({ email, password }) {
-  const client = getAuthClient();
+  const client = await getAuthClient();
   if (!client) {
     return {
       ok: false,
@@ -100,7 +114,7 @@ export async function signUpAccount({
   phone,
   agencyName,
 }) {
-  const client = getAuthClient();
+  const client = await getAuthClient();
   if (!client) {
     return {
       ok: false,

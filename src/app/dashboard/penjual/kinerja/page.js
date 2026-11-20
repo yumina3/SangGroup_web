@@ -10,11 +10,11 @@ export const metadata = { title: "Kinerja Agen" };
  * Profil agen dan dataset per periode disiapkan di server; seluruh interaksi
  * filter dan unduhan berjalan di workspace klien.
  */
-export default function AgentPerformancePage() {
-  return (
-    <AgentPerformanceWorkspace
-      datasets={getAgentPerformanceDatasets()}
-      agent={getAgentProfile()}
-    />
-  );
+export default async function AgentPerformancePage() {
+  const [datasets, agent] = await Promise.all([
+    getAgentPerformanceDatasets(),
+    getAgentProfile(),
+  ]);
+
+  return <AgentPerformanceWorkspace datasets={datasets} agent={agent} />;
 }

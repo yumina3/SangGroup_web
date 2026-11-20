@@ -25,7 +25,7 @@ async function TasksContent() {
   await connection();
 
   const now = new Date();
-  const { tasks, counts } = getAgentTasks(now);
+  const { tasks, counts } = await getAgentTasks(now);
 
   return <TaskWorkspace tasks={tasks} counts={counts} todayLabel={taskHeaderDate(now)} />;
 }
