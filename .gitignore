@@ -72,3 +72,7 @@ AGENTS.md deals
 # Temporary / local scripts
 fix-encoding.py
 tmp-inspect.mjs
+
+# Folder dan file lokal yang diabaikan
+docs/
+*.log

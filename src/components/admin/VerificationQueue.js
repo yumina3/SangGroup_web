@@ -1,134 +1,187 @@
-"use client";
+import ListingVerifyButtons from "@/components/admin/ListingVerifyButtons";
+import ActionButton from "@/components/dashboard/ActionButton";
+import Panel from "@/components/dashboard/Panel";
+import { EmptyState } from "@/components/dashboard/States";
+import { formatDate, formatRupiah } from "@/lib/dashboard/format";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+/**
+ * Antrean verifikasi listing pada dashboard admin.
+ *
+ * Tabel penuh dipakai di layar ≥768 px; di ponsel baris berubah menjadi kartu
+ * agar harga dan tombol tidak terjepit. Setiap baris bisa langsung disetujui
+ * atau ditolak lewat `ListingVerifyButtons`.
+ *
+ * `pendingCount` berasal dari rekap database yang sudah dimuat halaman induk.
+ * Bila tidak diberikan, jumlah baris yang dirender dipakai sebagai perkiraan.
+ *
+ * @param {{ items: Array<object>, query?: string, pendingCount?: number }} props
+ */
+export default function VerificationQueue({
+  items,
+  query,
+  pendingCount = items.length,
+}) {
+  return (
+    <Panel
+      title="Antrean Verifikasi"
+      description={
+        query
+          ? `Hasil pencarian “${query}” di antrean verifikasi.`
+          : "Listing baru yang menunggu keputusan admin."
+      }
+      action={
+        <span className="inline-flex items-center rounded-tag bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700">
+          {pendingCount} tertunda
+        </span>
+      }
+      bodyClassName=""
+    >
+      {items.length === 0 ? (
+        <EmptyState
+          title="Tidak ada listing yang cocok"
+          description={
+            query
+              ? `Tidak ada properti atau agen yang cocok dengan “${query}”. Coba kata kunci lain atau hapus pencarian.`
+              : "Antrean verifikasi sedang kosong."
+          }
+          action={
+            query ? (
+              <ActionButton as="link" href="/dashboard/admin" variant="outline" size="sm">
+                Hapus pencarian
+              </ActionButton>
+            ) : null
+          }
+          icon="✓"
+        />
+      ) : (
+        <>
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[680px] border-collapse text-left">
+              <caption className="sr-only">
+                Daftar listing yang menunggu verifikasi admin
+              </caption>
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/60">
+                  {["Foto", "Properti", "Agen", "Masuk", "Harga", "Aksi"].map(
+                    (label) => (
+                      <th
+                        key={label}
+                        scope="col"
+                        className="px-5 py-2.5 text-[10px] font-bold uppercase tracking-wide text-ag-slate-muted"
+                      >
+                        {label}
+                      </th>
+                    ),
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="border-b border-slate-100 last:border-b-0 hover:bg-ag-surface-low/40"
+                  >
+                    <td className="px-5 py-3">
+                      <PropertyThumb item={item} />
+                    </td>
+                    <td className="px-5 py-3">
+                      <p className="text-[12.5px] font-semibold leading-snug text-ag-slate">
+                        {item.title}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-ag-slate-secondary">
+                        {item.location}
+                      </p>
+                    </td>
+                    <td className="px-5 py-3 text-[12px] text-ag-slate-secondary">
+                      {item.agentName}
+                    </td>
+                    <td className="px-5 py-3">
+                      <p className="text-[12px] text-ag-slate">
+                        {formatDate(item.submittedAt)}
+                      </p>
+                      <p className="mt-0.5 text-[10.5px] font-semibold text-ag-booked">
+                        {item.submittedNote}
+                      </p>
+                    </td>
+                    <td className="whitespace-nowrap px-5 py-3 text-[12px] font-semibold text-ag-slate">
+                      {formatRupiah(item.price)}
+                    </td>
+                    <td className="px-5 py-3">
+                      <ListingVerifyButtons propertyId={item.id} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-import { verifyPropertyAction } from "@/app/admin/actions";
+          <ul className="divide-y divide-slate-100 md:hidden">
+            {items.map((item) => (
+              <li key={item.id} className="px-4 py-4">
+                <div className="flex items-start gap-3">
+                  <PropertyThumb item={item} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-semibold leading-snug text-ag-slate">
+                      {item.title}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-ag-slate-secondary">
+                      {item.location} · {item.agentName}
+                    </p>
 
-const BUSINESS_LABEL = { tersedia: "Tersedia", dipesan: "Dipesan", terjual: "Terjual" };
+                    <div className="mt-2.5 flex flex-wrap items-end justify-between gap-2">
+                      <div>
+                        <p className="text-[12px] font-semibold text-ag-slate">
+                          {formatRupiah(item.price)}
+                        </p>
+                        <p className="text-[10.5px] text-ag-slate-muted">
+                          {formatDate(item.submittedAt)} ·{" "}
+                          <span className="font-semibold text-ag-booked">
+                            {item.submittedNote}
+                          </span>
+                        </p>
+                      </div>
+                      <ListingVerifyButtons propertyId={item.id} />
+                    </div>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
 
-/** Antrean verifikasi listing (FR-38, FR-39). */
-export default function VerificationQueue({ items }) {
-  const router = useRouter();
-  const [busyId, setBusyId] = useState(null);
-  const [error, setError] = useState("");
-  const [rejecting, setRejecting] = useState(null);
-  const [note, setNote] = useState("");
+          <div className="flex flex-col gap-2 border-t border-slate-100 px-5 py-3 text-[11.5px] text-ag-slate-secondary sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              Menampilkan {items.length} dari {pendingCount} antrean verifikasi
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span
+                aria-hidden="true"
+                className="h-1.5 w-1.5 rounded-full bg-ag-available"
+              />
+              Data terbaru dari database
+            </span>
+          </div>
+        </>
+      )}
+    </Panel>
+  );
+}
 
-  async function decide(id, decision, reason = "") {
-    setBusyId(id);
-    setError("");
-    const response = await verifyPropertyAction(id, decision, reason);
-    setBusyId(null);
-
-    if (!response.ok) {
-      setError(response.formError ?? "Keputusan gagal disimpan.");
-      return;
-    }
-    setRejecting(null);
-    setNote("");
-    router.refresh();
-  }
-
-  if (items.length === 0) {
-    return (
-      <p className="rounded-dash border border-dashed border-ag-line bg-white px-4 py-8 text-center text-[13px] text-ag-slate-secondary">
-        Tidak ada listing yang menunggu verifikasi.
-      </p>
-    );
-  }
+function PropertyThumb({ item }) {
+  const [initial] = Array.from(item.title ?? "");
 
   return (
-    <div className="space-y-3">
-      {error ? (
-        <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12.5px] text-red-700">
-          {error}
-        </p>
+    <span className="relative flex h-11 w-14 shrink-0 items-center justify-center overflow-hidden rounded-tag border border-ag-line bg-ag-surface-low text-[15px] font-bold uppercase text-ag-slate-secondary">
+      <span aria-hidden={item.imageUrl ? "true" : undefined}>{initial || "—"}</span>
+      {item.imageUrl ? (
+        // Foto dari Supabase Storage: URL dinamis, jadi next/image tidak dipakai.
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={item.imageUrl}
+          alt=""
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
       ) : null}
-
-      <ul className="space-y-3">
-        {items.map((property) => (
-          <li key={property.id} className="rounded-dash border border-ag-line bg-white p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[14px] font-bold">{property.title}</p>
-                <p className="text-[12px] text-ag-slate-secondary">
-                  {property.project?.name} · {property.slug} · {property.category?.name}
-                </p>
-                <p className="mt-1 text-[12px] text-ag-slate-muted">
-                  Agen: {property.owner?.fullName} ·{" "}
-                  {new Intl.NumberFormat("id-ID", {
-                    style: "currency",
-                    currency: "IDR",
-                    maximumFractionDigits: 0,
-                  }).format(property.price)}
-                </p>
-                <p className="text-[12px] text-ag-slate-muted">
-                  {property.landArea} m² tanah · {property.buildingArea} m² bangunan ·{" "}
-                  {property.bedrooms} KT · {property.bathrooms} KM · {property.images?.length ?? 0} foto ·{" "}
-                  {BUSINESS_LABEL[property.businessStatus]}
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => decide(property.id, "approved")}
-                  disabled={busyId === property.id}
-                  className="rounded-lg bg-ag-forest px-3 py-2 text-[12px] font-semibold text-white disabled:opacity-60"
-                >
-                  Setujui
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRejecting(property.id);
-                    setNote("");
-                  }}
-                  disabled={busyId === property.id}
-                  className="rounded-lg border border-red-300 px-3 py-2 text-[12px] font-semibold text-red-700 disabled:opacity-60"
-                >
-                  Tolak
-                </button>
-              </div>
-            </div>
-
-            {rejecting === property.id ? (
-              <div className="mt-3 space-y-2 border-t border-ag-line pt-3">
-                <label htmlFor={`note-${property.id}`} className="block text-[12px] font-semibold">
-                  Catatan penolakan (wajib, 5–500 karakter)
-                </label>
-                <textarea
-                  id={`note-${property.id}`}
-                  value={note}
-                  onChange={(event) => setNote(event.target.value)}
-                  rows={3}
-                  maxLength={500}
-                  className="w-full rounded-lg border border-ag-line px-3 py-2 text-[13px]"
-                  placeholder="Contoh: titik koordinat tidak sesuai dokumen."
-                />
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => decide(property.id, "rejected", note)}
-                    disabled={busyId === property.id || note.trim().length < 5}
-                    className="rounded-lg bg-red-600 px-3 py-2 text-[12px] font-semibold text-white disabled:opacity-60"
-                  >
-                    Kirim penolakan
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRejecting(null)}
-                    className="rounded-lg border border-ag-line px-3 py-2 text-[12px] font-semibold"
-                  >
-                    Batal
-                  </button>
-                </div>
-              </div>
-            ) : null}
-          </li>
-        ))}
-      </ul>
-    </div>
+    </span>
   );
 }

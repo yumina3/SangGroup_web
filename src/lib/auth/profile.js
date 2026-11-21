@@ -82,6 +82,41 @@ export async function findProfileById(id) {
 }
 
 /**
+ * Jumlah akun per role untuk kartu ringkasan admin. Hasil terstruktur dipakai
+ * halaman agar kartu tetap tampil walau database belum tersambung.
+ *
+ * @returns {{ ok: true, counts: { admin: number, agent: number, buyer: number }, total: number } | { ok: false, code: string }}
+ */
+export async function countProfilesByRole() {
+  if (!isDatabaseConfigured()) {
+    return { ok: false, code: "db_not_configured" };
+  }
+
+  try {
+    const rows = await getDb().profile.groupBy({
+      by: ["role"],
+      _count: { _all: true },
+    });
+
+    const counts = { admin: 0, agent: 0, buyer: 0 };
+    for (const row of rows) {
+      if (row.role in counts) counts[row.role] = row._count._all;
+    }
+
+    return {
+      ok: true,
+      counts,
+      total: counts.admin + counts.agent + counts.buyer,
+    };
+  } catch (error) {
+    logAuth("profile_count_failed", {
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return { ok: false, code: "db_error" };
+  }
+}
+
+/**
  * Dibuat idempoten karena baris profil mungkin sudah dibuat oleh proses lain.
  * Role selalu `buyer`; jangan pernah membaca role dari form atau metadata.
  */

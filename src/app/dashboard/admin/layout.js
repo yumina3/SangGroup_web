@@ -1,26 +1,20 @@
-import AccountShell from "@/components/dashboard/AccountShell";
+import AdminShell from "@/components/admin/AdminShell";
 import { adminLogoutAction } from "@/app/(auth)/logout/actions";
 import { requireRole } from "@/lib/auth/session";
 
-const NAV = [
-  { label: "Ringkasan", href: "/dashboard/admin" },
-  { label: "Situs Publik", href: "/" },
-];
+export const metadata = {
+  title: { default: "Portal Admin", template: "%s — SANG Group" },
+};
 
-/** Membaca sesi di setiap request. */
+/** Layout ini membaca sesi di setiap request. */
 export const instant = false;
 
 export default async function AdminLayout({ children }) {
   const profile = await requireRole("admin", "/dashboard/admin");
 
   return (
-    <AccountShell
-      portal="Portal Admin"
-      profile={profile}
-      nav={NAV}
-      logoutAction={adminLogoutAction}
-    >
+    <AdminShell profile={profile} logoutAction={adminLogoutAction}>
       {children}
-    </AccountShell>
+    </AdminShell>
   );
 }

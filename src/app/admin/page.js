@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import VerificationQueue from "@/components/admin/VerificationQueue";
 import { requirePageUser } from "@/lib/auth/current-user";
+import { toVerificationQueueItems } from "@/lib/dashboard/verification-queue";
 import { listRecentInquiriesForAdmin } from "@/lib/services/admin";
 import { getAdminRecap, listAdminProperties } from "@/lib/services/properties";
 
@@ -113,7 +114,10 @@ export default async function AdminPage() {
           </Link>
         </div>
         <div className="mt-4">
-          <VerificationQueue items={pending.items} />
+          <VerificationQueue
+            items={toVerificationQueueItems(pending.items)}
+            pendingCount={recap.byVerification.pending ?? 0}
+          />
         </div>
       </section>
 

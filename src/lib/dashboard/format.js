@@ -118,3 +118,26 @@ export function initialsOf(name) {
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Label umur baris antrean: "Hari ini", "Kemarin", "5 hari lalu".
+ *
+ * Diukur dalam hari Jakarta (bukan selisih jam) supaya listing yang masuk
+ * pukul 23.00 tetap disebut "Kemarin" keesokan paginya.
+ */
+export function formatVerificationAge(value, now = new Date()) {
+  const date = toDate(value);
+  if (!date) return "—";
+
+  const days = Math.round(
+    (Date.parse(`${jakartaDayKey(now)}T00:00:00Z`) -
+      Date.parse(`${jakartaDayKey(date)}T00:00:00Z`)) /
+      DAY_MS,
+  );
+
+  if (days <= 0) return "Hari ini";
+  if (days === 1) return "Kemarin";
+  return `${days} hari lalu`;
+}
