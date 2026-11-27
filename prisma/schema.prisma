@@ -122,6 +122,9 @@ model Property {
   buildingArea       Int                @map("building_area")
   bedrooms           Int                @default(0)
   bathrooms          Int                @default(0)
+  unit               String             @default("")
+  floors             Int                @default(1)
+  city               String             @default("")
   address            String
   /// Boleh null: listing tanpa koordinat tidak menghasilkan marker.
   latitude           Decimal?           @db.Decimal(9, 6)

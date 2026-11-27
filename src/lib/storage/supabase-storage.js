@@ -12,7 +12,7 @@ import { getSupabaseAdmin, isServiceRoleConfigured } from "@/lib/supabase/admin"
  * `storage_path`, bukan isi berkas/Base64.
  */
 
-export const IMAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "property-images";
+export const IMAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "property_images";
 export const MAX_IMAGES_PER_PROPERTY = 8;
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 export const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];

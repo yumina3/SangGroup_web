@@ -17,9 +17,6 @@ const requiredText = (label, min, max) =>
     .min(min, { error: `${label} wajib diisi` })
     .max(max, { error: `${label} maksimal ${max} karakter` });
 
-/** Kategori listing yang boleh dipilih penjual (sama dengan isian form). */
-export const PROPERTY_CATEGORIES = ["Rumah", "Ruko", "Kavling", "Apartemen"];
-
 const numeric = (label, { min, max, integer = true }) =>
   z
     .string()
@@ -38,8 +35,8 @@ const numeric = (label, { min, max, integer = true }) =>
 
 export const propertyFormSchema = z.object({
   title: requiredText("Nama properti", 5, 120),
-  category: z.enum(PROPERTY_CATEGORIES, { error: "Pilih kategori yang tersedia" }),
-  cluster: requiredText("Perumahan / cluster", 2, 80),
+  categoryId: z.string().uuid({ error: "Pilih kategori properti" }),
+  projectId: z.string().uuid({ error: "Pilih proyek perumahan" }),
   unit: requiredText("Nomor kavling / unit", 1, 30),
   description: z
     .string()
@@ -110,7 +107,15 @@ export function validatePropertyForm(raw, { submission = "PENDING" } = {}) {
 }
 
 /** Field yang mengembalikan listing VERIFIED ke PENDING (SRS-F-SEL-08). */
-export const KEY_FIELDS = ["price", "latitude", "longitude", "address"];
+export const KEY_FIELDS = [
+  "price",
+  "latitude",
+  "longitude",
+  "address",
+  "unit",
+  "floors",
+  "city",
+];
 
 /** Field kunci mana saja yang berubah dibanding properti tersimpan. */
 export function changedKeyFields(property, form) {

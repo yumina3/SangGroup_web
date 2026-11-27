@@ -62,6 +62,9 @@ export function serializePublicProperty(property) {
     buildingArea: property.buildingArea,
     bedrooms: property.bedrooms,
     bathrooms: property.bathrooms,
+    unit: property.unit,
+    floors: property.floors,
+    city: property.city,
     address: property.address,
     latitude: property.latitude === null ? null : Number(property.latitude),
     longitude: property.longitude === null ? null : Number(property.longitude),
@@ -115,13 +118,26 @@ function propertyWriteData(input) {
   if (input.buildingArea !== undefined) data.buildingArea = input.buildingArea;
   if (input.bedrooms !== undefined) data.bedrooms = input.bedrooms;
   if (input.bathrooms !== undefined) data.bathrooms = input.bathrooms;
+  if (input.unit !== undefined) data.unit = input.unit;
+  if (input.floors !== undefined) data.floors = input.floors;
+  if (input.city !== undefined) data.city = input.city;
   if (input.address !== undefined) data.address = input.address;
   if (input.latitude !== undefined) data.latitude = decimalOrNull(input.latitude);
   if (input.longitude !== undefined) data.longitude = decimalOrNull(input.longitude);
   return data;
 }
 
-const KEY_FIELDS = ["price", "latitude", "longitude", "projectId", "categoryId", "address"];
+const KEY_FIELDS = [
+  "price",
+  "latitude",
+  "longitude",
+  "projectId",
+  "categoryId",
+  "address",
+  "unit",
+  "floors",
+  "city",
+];
 
 // --- Publik -------------------------------------------------------------
 
@@ -331,6 +347,9 @@ export async function updateProperty(agentId, propertyId, input) {
       projectId: true,
       categoryId: true,
       address: true,
+      unit: true,
+      floors: true,
+      city: true,
     },
   });
   if (!current) {
@@ -574,8 +593,23 @@ export async function verifyProperty(adminId, propertyId, { decision, note }) {
     return notification.id;
   });
 
-  await enqueueAll([notificationId]);
-  logger.info({ event: "property.verified", propertyId, decision, adminId }, "Verifikasi listing");
+  
+  void enqueueAll([notificationId]).catch((error) => {
+    logger.warn(
+      {
+        event: "notification.enqueue_background_failed",
+        notificationId,
+        err: error?.message,
+      },
+      "Gagal memasukkan notifikasi ke antrean"
+    );
+  });
+
+  logger.info(
+    { event: "property.verified", propertyId, decision, adminId },
+    "Verifikasi listing"
+  );
+
 }
 
 /** Rekap admin dari database, bukan angka hard-coded (FR-42, FR-43). */
@@ -648,20 +682,25 @@ const LEGACY_SALE = { tersedia: "AVAILABLE", dipesan: "BOOKED", terjual: "SOLD" 
 
 function legacyProperty(property) {
   const primary = property.images?.[0] ?? null;
+
   return {
     id: property.id,
     title: property.title,
+    // Relasi database
+    projectId: property.projectId,
+    categoryId: property.categoryId,
     cluster: property.project?.name ?? "—",
-    unit: property.slug,
     category: property.category?.name ?? "—",
+    // Informasi properti dari database
+    unit: property.unit,
+    floors: property.floors,
+    city: property.city,
     price: Number(property.price),
-    city: property.project?.name ?? "—",
     address: property.address,
     landArea: property.landArea,
     buildingArea: property.buildingArea,
     bedrooms: property.bedrooms,
     bathrooms: property.bathrooms,
-    floors: 1,
     latitude: property.latitude === null ? 0 : Number(property.latitude),
     longitude: property.longitude === null ? 0 : Number(property.longitude),
     description: property.description,

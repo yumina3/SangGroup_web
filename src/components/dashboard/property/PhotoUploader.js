@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { IconClose, IconPlus } from "@/components/dashboard/icons";
 
@@ -34,13 +34,16 @@ function formatBytes(bytes) {
  * tipe, dan ukuran tetap ditegakkan sehingga pengguna tahu berkas mana saja
  * yang akan sah saat unggah aktif.
  */
-export default function PhotoUploader() {
+export default function PhotoUploader ({ onFilesChange }) {
   const [photos, setPhotos] = useState([]);
   const [errors, setErrors] = useState([]);
   const inputRef = useRef(null);
   const counter = useRef(0);
 
   const primaryId = useMemo(() => photos[0]?.id ?? null, [photos]);
+  useEffect(() => {
+    onFilesChange?.(photos.map((photo) => photo.file));
+  }, [photos, onFilesChange]);
 
   function addFiles(fileList) {
     const incoming = Array.from(fileList ?? []);
@@ -76,6 +79,7 @@ export default function PhotoUploader() {
           name: file.name,
           size: file.size,
           url: URL.createObjectURL(file),
+          file,
         };
       });
 
@@ -201,8 +205,7 @@ export default function PhotoUploader() {
       ) : null}
 
       <p className="rounded-dash border border-ag-line bg-ag-surface-low px-3 py-2 text-[12px] leading-relaxed text-ag-slate-secondary">
-        Penyimpanan foto ke Supabase Storage belum dikonfigurasi. Berkas di atas
-        hanya ditinjau di perangkat ini dan belum dikirim ke server.
+        Foto akan diunggah ke server setelah Anda menyimpan data properti.
       </p>
     </div>
   );

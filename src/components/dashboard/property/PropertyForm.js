@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import ActionButton from "@/components/dashboard/ActionButton";
 import InfoNotice from "@/components/dashboard/InfoNotice";
@@ -13,7 +13,6 @@ import PropertyField, {
   PropertySelect,
   PropertyTextarea,
 } from "@/components/dashboard/property/PropertyField";
-import { AGENT_CATEGORY_OPTIONS } from "@/lib/dashboard/ui-constants";
 import { formatRupiah } from "@/lib/dashboard/format";
 import {
   changedKeyFields,
@@ -21,16 +20,11 @@ import {
   validatePropertyForm,
 } from "@/lib/validators/property";
 
-const CATEGORY_OPTIONS = AGENT_CATEGORY_OPTIONS.map((category) => ({
-  value: category,
-  label: category,
-}));
-
 function emptyForm() {
   return {
     title: "",
-    category: AGENT_CATEGORY_OPTIONS[0],
-    cluster: "",
+    projectId: "",
+    categoryId: "",
     unit: "",
     price: "",
     landArea: "",
@@ -49,8 +43,8 @@ function emptyForm() {
 function formFromProperty(property) {
   return {
     title: property.title ?? "",
-    category: property.category ?? AGENT_CATEGORY_OPTIONS[0],
-    cluster: property.cluster ?? "",
+    projectId: property.projectId ?? property.project?.id ?? "",
+    categoryId: property.categoryId ?? property.category?.id ?? "",
     unit: property.unit ?? "",
     price: String(property.price ?? ""),
     landArea: String(property.landArea ?? ""),
@@ -61,8 +55,8 @@ function formFromProperty(property) {
     address: property.address ?? "",
     city: property.city ?? "Semarang",
     description: property.description ?? "",
-    latitude: String(property.latitude ?? ""),
-    longitude: String(property.longitude ?? ""),
+    latitude: property.latitude == null ? "" : String(property.latitude),
+    longitude: property.longitude == null ? "" : String(property.longitude),
   };
 }
 
@@ -84,9 +78,67 @@ export default function PropertyForm({ mode = "create", property = null }) {
   const toast = useToast();
   const isEdit = mode === "edit";
 
-  const [form, setForm] = useState(() => (property ? formFromProperty(property) : emptyForm()));
+  const [form, setForm] = useState(() =>
+  property ? formFromProperty(property) : emptyForm());
   const [errors, setErrors] = useState({});
   const [saved, setSaved] = useState(null);
+  // State untuk data proyek dan kategori dari API
+  const [projects, setProjects] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loadingOptions, setLoadingOptions] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [photoFiles, setPhotoFiles] = useState([]);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [createdPropertyId, setCreatedPropertyId] = useState(property?.id ?? null);
+  const handlePhotoFilesChange = useCallback((files) => {
+    setPhotoFiles(files);}, []);
+  const projectOptions = [{
+    value: "",
+    label: loadingOptions ? "Memuat proyek..." : "Pilih proyek perumahan",
+  },
+  ...projects.map((project) => ({
+    value: project.id,
+    label: project.name,
+  })),
+  ];
+  const categoryOptions = [{
+    value: "",
+    label: loadingOptions ? "Memuat kategori..." : "Pilih kategori",
+  },
+  ...categories.map((category) => ({
+    value: category.id,
+    label: category.name,
+  })),
+  ];
+
+  useEffect(() => {
+    async function loadOptions() {
+      try {
+        setLoadingOptions(true);
+
+        const [projectResponse, categoryResponse] = await Promise.all([
+          fetch("/api/projects"),
+          fetch("/api/categories"),
+        ]);
+
+        const projectResult = await projectResponse.json();
+        const categoryResult = await categoryResponse.json();
+
+        if (!projectResponse.ok || !categoryResponse.ok) {
+          throw new Error("Gagal mengambil data proyek dan kategori.");
+        }
+
+        setProjects(projectResult.data?.items ?? []);
+        setCategories(categoryResult.data?.items ?? []);
+      } catch (error) {
+        toast.push(error.message || "Gagal memuat pilihan form.", "danger");
+      } finally {
+        setLoadingOptions(false);
+      }
+    }
+
+    loadOptions();
+  }, []);
 
   const options = submissionOptions(property?.listingStatus);
   const locked = options.locked;
@@ -100,47 +152,135 @@ export default function PropertyForm({ mode = "create", property = null }) {
     return (value) => setForm((current) => ({ ...current, [name]: value }));
   }
 
-  function submit(submission) {
-    if (locked) {
+  async function uploadPhotos(propertyId) {
+  const pendingFiles = photoFiles.filter(
+    (file) => !uploadedFiles.includes(file)
+  );
+  for (const file of pendingFiles) {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("altText", file.name);
+    const response = await fetch(
+      `/api/agent/properties/${propertyId}/images`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(
+        result.error?.message ||
+        result.message ||
+        `Gagal mengunggah foto ${file.name}.`
+      );
+    }
+    setUploadedFiles((current) => [...current, file]);
+    }
+  }
+
+  async function submit(submission) {
+    if (locked || submitting) return;
+
+    // Backend belum mendukung penyimpanan draft.
+    if (submission === "DRAFT") {
       toast.push(
-        "Listing sedang menunggu verifikasi admin. Perubahan belum bisa disimpan.",
+        "Penyimpanan draft belum tersedia. Silakan kirim untuk verifikasi.",
         "danger",
       );
       return;
     }
 
-    const result = validatePropertyForm(form, { submission });
-
-    if (!result.ok) {
-      setErrors(result.fieldErrors);
-      setSaved(null);
-      toast.push("Beberapa isian belum benar. Periksa pesan berwarna merah.", "danger");
-      const firstInvalid = document.querySelector('[aria-invalid="true"]');
-      if (firstInvalid) {
-        firstInvalid.focus();
-      } else {
-        const firstError = Object.keys(result.fieldErrors)[0];
-        document.querySelector(`[name="${firstError}"]`)?.focus();
-      }
+    // Validasi dasar sebelum mengirim ke API.
+    if (!form.projectId || !form.categoryId) {
+      toast.push("Pilih proyek dan kategori terlebih dahulu.", "danger");
       return;
     }
 
-    setErrors({});
-    setSaved({ submission, value: result.value });
+    const payload = {
+      projectId: form.projectId,
+      categoryId: form.categoryId,
+      title: form.title.trim(),
+      description: form.description.trim(),
+      price: Number(form.price),
+      landArea: Number(form.landArea),
+      buildingArea: Number(form.buildingArea),
+      bedrooms: Number(form.bedrooms),
+      bathrooms: Number(form.bathrooms),
+      unit: form.unit.trim(),
+      floors: Number(form.floors),
+      city: form.city.trim(),
+      address: form.address.trim(),
+      latitude: form.latitude === "" ? null : Number(form.latitude),
+      longitude: form.longitude === "" ? null : Number(form.longitude),
+    };
 
-    const unchanged =
-      isEdit && property?.listingStatus === "VERIFIED" && changedKeyFields(property, form).length === 0;
+    setSubmitting(true);
 
-    toast.push(
-      submission === "DRAFT"
-        ? "Pratinjau: draft belum tersimpan (penyimpanan belum aktif)."
-        : unchanged
-          ? "Pratinjau: perubahan pada field non-kunci belum tersimpan; status tetap terverifikasi."
-          : property?.listingStatus === "VERIFIED"
-            ? "Pratinjau: listing akan kembali ke menunggu verifikasi, belum tersimpan."
-            : "Pratinjau: pengajuan verifikasi belum tersimpan.",
-      "info",
-    );
+    try {
+      const targetPropertyId = isEdit
+      ? property.id
+      : createdPropertyId;
+      const shouldUpdate = Boolean(targetPropertyId);
+      const url = shouldUpdate
+      ? `/api/agent/properties/${targetPropertyId}`
+      : "/api/agent/properties";
+      const response = await fetch(url, {
+        method: shouldUpdate ? "PATCH" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error?.message ||
+          result.message ||
+          "Gagal menyimpan data properti."
+        );
+      }
+
+      // Ambil ID properti yang baru dibuat atau diperbarui.
+      const savedPropertyId =
+        result.data?.id ||
+        result.data?.property?.id ||
+        targetPropertyId;
+
+      if (!savedPropertyId) {
+        throw new Error(
+          "Data properti tersimpan, tetapi ID properti tidak ditemukan untuk proses upload foto."
+        );
+      }
+
+      // Simpan ID agar percobaan ulang tidak membuat properti duplikat.
+      if (!shouldUpdate) {
+        setCreatedPropertyId(savedPropertyId);
+      }
+
+      // Unggah foto setelah data properti berhasil disimpan.
+      await uploadPhotos(savedPropertyId);
+
+      setErrors({});
+
+      toast.push(
+        shouldUpdate
+          ? "Properti dan foto berhasil diperbarui."
+          : "Properti dan foto berhasil dikirim untuk verifikasi.",
+        "success"
+      );
+
+      window.location.href = "/dashboard/penjual/properti";
+    } catch (error) {
+      toast.push(
+        error.message || "Terjadi kesalahan saat menyimpan properti.",
+        "danger",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -182,22 +322,22 @@ export default function PropertyForm({ mode = "create", property = null }) {
 
             <PropertySelect
               label="Kategori"
-              name="category"
-              value={form.category}
-              onChange={setField("category")}
-              options={CATEGORY_OPTIONS}
+              name="categoryId"
+              value={form.categoryId}
+              onChange={setField("categoryId")}
+              options={categoryOptions}
               required
-              error={errors.category}
+              error={errors.categoryId}
             />
 
-            <PropertyField
+            <PropertySelect
               label="Perumahan / cluster"
-              name="cluster"
-              value={form.cluster}
-              onChange={setField("cluster")}
+              name="projectId"
+              value={form.projectId}
+              onChange={setField("projectId")}
+              options={projectOptions}
               required
-              placeholder="Contoh: Tembalang Hillcrest"
-              error={errors.cluster}
+              error={errors.projectId}
             />
 
             <PropertyField
@@ -285,12 +425,8 @@ export default function PropertyForm({ mode = "create", property = null }) {
         </Panel>
 
         <Panel title="Foto properti" description="Maksimal 8 foto, JPG/PNG, 2 MB per foto.">
-          <InfoNotice title="Penyimpanan foto belum aktif">
-            Supabase Storage belum dikonfigurasi. Foto hanya ditinjau di perangkat ini dan belum
-            dikirim ke server.
-          </InfoNotice>
           <div className="mt-4">
-            <PhotoUploader />
+            <PhotoUploader onFilesChange={handlePhotoFilesChange} />
           </div>
         </Panel>
 
@@ -391,8 +527,16 @@ export default function PropertyForm({ mode = "create", property = null }) {
             </ActionButton>
           ) : null}
           {options.verify ? (
-            <ActionButton type="submit" variant="primary" disabled={locked}>
-              {isEdit ? "Simpan & kirim ulang" : "Kirim untuk verifikasi"}
+            <ActionButton
+              type="submit"
+              variant="primary"
+              disabled={locked || submitting}
+              >
+                {submitting
+                  ? "Menyimpan..."
+                  : isEdit
+                  ? "Simpan & kirim ulang"
+                  : "Kirim untuk verifikasi"}
             </ActionButton>
           ) : null}
         </div>
