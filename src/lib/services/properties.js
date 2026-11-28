@@ -1,5 +1,6 @@
 import "server-only";
 
+import { Prisma } from "@/generated/prisma/client";
 import { getDb } from "@/lib/db/client";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logger } from "@/lib/logging/logger";
@@ -616,6 +617,10 @@ export async function verifyProperty(adminId, propertyId, { decision, note }) {
 export async function getAdminRecap() {
   const db = getDb();
 
+  // Sengaja independen, bukan `$transaction([...])`. Di Prisma 7 adapter `pg`,
+  // statement transaksi dikirim lewat satu koneksi tanpa await sehingga query
+  // ke-11 memicu DeprecationWarning `client.query()` di pg (pool default 10
+  // koneksi). query ini hanya hitungan; membacanya tidak perlu atomik.
   const [
     totalProperties,
     byVerification,
@@ -625,7 +630,8 @@ export async function getAdminRecap() {
     totalInquiries,
     usersByRole,
     totalFavorites,
-  ] = await db.$transaction([
+    projects,
+  ] = await Promise.all([
     db.property.count(),
     db.property.groupBy({ by: ["verificationStatus"], _count: { _all: true } }),
     db.property.groupBy({ by: ["businessStatus"], _count: { _all: true } }),
@@ -634,9 +640,12 @@ export async function getAdminRecap() {
     db.propertyInquiry.count(),
     db.profile.groupBy({ by: ["role"], _count: { _all: true } }),
     db.favorite.count(),
+    db.project.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, slug: true },
+    }),
   ]);
 
-  const projects = await db.project.findMany({ select: { id: true, name: true, slug: true } });
   const projectName = new Map(projects.map((project) => [project.id, project.name]));
 
   return {
@@ -657,6 +666,198 @@ export async function getAdminRecap() {
     ),
     usersByRole: Object.fromEntries(usersByRole.map((row) => [row.role, row._count._all])),
   };
+}
+
+// --- Rekap Properti (halaman admin) -------------------------------------
+
+const EMPTY_STATUS_COUNT = { tersedia: 0, dipesan: 0, terjual: 0 };
+const EMPTY_VERIFICATION_COUNT = { pending: 0, approved: 0, rejected: 0 };
+
+/**
+ * Semua angka halaman Rekap Properti dalam satu query.
+ *
+ * Satu `$queryRaw` dengan subquery agregat menghindari belasan round-trip
+ * sekaligus; filter halaman (periode/cluster/kategori/agen/status) diterapkan
+ * di dalam setiap subquery agar kartu, chart, dan tabel selalu konsisten.
+ *
+ * @param {{ since?: Date | null, projectId?: string, categoryId?: string, ownerId?: string, businessStatus?: string }} filters
+ */
+export async function getPropertyRecap({
+  since = null,
+  projectId = "",
+  categoryId = "",
+  ownerId = "",
+  businessStatus = "",
+} = {}) {
+  const db = getDb();
+  const propertyFilter = Prisma.sql`
+    ${since ? Prisma.sql`AND p.created_at >= ${since}` : Prisma.empty}
+    ${projectId ? Prisma.sql`AND p.project_id = ${projectId}::uuid` : Prisma.empty}
+    ${categoryId ? Prisma.sql`AND p.category_id = ${categoryId}::uuid` : Prisma.empty}
+    ${ownerId ? Prisma.sql`AND p.owner_id = ${ownerId}::uuid` : Prisma.empty}
+    ${
+      businessStatus
+        ? Prisma.sql`AND p.business_status = ${businessStatus}::"BusinessStatus"`
+        : Prisma.empty
+    }
+  `;
+
+  const rows = await db.$queryRaw`
+    WITH filtered AS (
+      SELECT p.id, p.project_id, p.category_id, p.owner_id, p.price,
+             p.business_status, p.verification_status, p.latitude, p.longitude
+      FROM properties p
+      WHERE true ${propertyFilter}
+    )
+    SELECT
+      (SELECT count(*) FROM filtered) AS total,
+      (SELECT coalesce(sum(price), 0) FROM filtered) AS total_value,
+      (SELECT count(*) FROM filtered WHERE latitude IS NOT NULL AND longitude IS NOT NULL) AS geotagged,
+      (SELECT count(*) FROM properties WHERE latitude IS NOT NULL AND longitude IS NOT NULL) AS total_geotagged,
+      (SELECT coalesce(json_agg(row_to_json(t)), '[]'::json) FROM (
+        SELECT business_status AS key, count(*) AS "count" FROM filtered GROUP BY 1
+      ) t) AS by_business,
+      (SELECT coalesce(json_agg(row_to_json(t)), '[]'::json) FROM (
+        SELECT verification_status AS key, count(*) AS "count" FROM filtered GROUP BY 1
+      ) t) AS by_verification,
+      (SELECT coalesce(json_agg(row_to_json(t)), '[]'::json) FROM (
+        SELECT f.project_id, pj.name, count(*) AS "count",
+               count(*) FILTER (WHERE f.business_status = 'tersedia') AS tersedia,
+               count(*) FILTER (WHERE f.business_status = 'dipesan') AS dipesan,
+               count(*) FILTER (WHERE f.business_status = 'terjual') AS terjual
+        FROM filtered f
+        JOIN projects pj ON pj.id = f.project_id
+        GROUP BY 1, 2
+        ORDER BY 2
+      ) t) AS by_project,
+      (SELECT coalesce(json_agg(row_to_json(t)), '[]'::json) FROM (
+        SELECT f.category_id, c.name, count(*) AS "count", coalesce(sum(f.price), 0) AS value
+        FROM filtered f
+        JOIN property_categories c ON c.id = f.category_id
+        GROUP BY 1, 2
+        ORDER BY 3 DESC, 2
+      ) t) AS by_category,
+      (SELECT coalesce(json_agg(row_to_json(t)), '[]'::json) FROM (
+        SELECT f.owner_id, pr.full_name,
+               count(*) AS total,
+               count(*) FILTER (WHERE f.verification_status = 'approved') AS verified,
+               count(*) FILTER (WHERE f.business_status = 'tersedia') AS tersedia,
+               count(*) FILTER (WHERE f.business_status = 'dipesan') AS dipesan,
+               count(*) FILTER (WHERE f.business_status = 'terjual') AS terjual,
+               coalesce(sum(f.price), 0) AS value
+        FROM filtered f
+        JOIN profiles pr ON pr.id = f.owner_id
+        GROUP BY 1, 2
+        ORDER BY 3 DESC, 2
+      ) t) AS by_agent,
+      (SELECT coalesce(json_agg(row_to_json(t)), '[]'::json) FROM (
+        SELECT pj.id, pj.name FROM projects pj ORDER BY pj.name
+      ) t) AS projects,
+      (SELECT coalesce(json_agg(row_to_json(t)), '[]'::json) FROM (
+        SELECT c.id, c.name FROM property_categories c ORDER BY c.name
+      ) t) AS categories,
+      (SELECT coalesce(json_agg(row_to_json(t)), '[]'::json) FROM (
+        SELECT pr.id, pr.full_name FROM profiles pr WHERE pr.role = 'agent' ORDER BY pr.full_name
+      ) t) AS agents
+  `;
+
+  const row = rows[0] ?? {};
+  const byBusiness = { ...EMPTY_STATUS_COUNT };
+  for (const item of row.by_business ?? []) byBusiness[item.key] = Number(item.count);
+
+  const byVerification = { ...EMPTY_VERIFICATION_COUNT };
+  for (const item of row.by_verification ?? []) {
+    byVerification[item.key] = Number(item.count);
+  }
+
+  return {
+    total: Number(row.total ?? 0),
+    totalValue: Number(row.total_value ?? 0),
+    geotagged: Number(row.geotagged ?? 0),
+    totalGeotagged: Number(row.total_geotagged ?? 0),
+    byBusiness,
+    byVerification,
+    byProject: (row.by_project ?? []).map((item) => ({
+      projectId: item.project_id,
+      name: item.name,
+      total: Number(item.count),
+      tersedia: Number(item.tersedia),
+      dipesan: Number(item.dipesan),
+      terjual: Number(item.terjual),
+    })),
+    byCategory: (row.by_category ?? []).map((item) => ({
+      categoryId: item.category_id,
+      name: item.name,
+      total: Number(item.count),
+      value: Number(item.value),
+    })),
+    byAgent: (row.by_agent ?? []).map((item) => ({
+      agentId: item.owner_id,
+      name: item.full_name,
+      total: Number(item.total),
+      verified: Number(item.verified),
+      tersedia: Number(item.tersedia),
+      dipesan: Number(item.dipesan),
+      terjual: Number(item.terjual),
+      value: Number(item.value),
+    })),
+    options: {
+      projects: row.projects ?? [],
+      categories: row.categories ?? [],
+      agents: row.agents ?? [],
+    },
+  };
+}
+
+/** Daftar properti untuk tabel Rekap Properti (sudah difilter). */
+export async function listRecapProperties({
+  since = null,
+  projectId = "",
+  categoryId = "",
+  ownerId = "",
+  businessStatus = "",
+} = {}) {
+  const db = getDb();
+  const where = {
+    ...(since ? { createdAt: { gte: since } } : {}),
+    ...(projectId ? { projectId } : {}),
+    ...(categoryId ? { categoryId } : {}),
+    ...(ownerId ? { ownerId } : {}),
+    ...(businessStatus ? { businessStatus } : {}),
+  };
+
+  const rows = await db.property.findMany({
+    where,
+    include: {
+      project: { select: { id: true, name: true } },
+      category: { select: { id: true, name: true } },
+      owner: { select: { id: true, fullName: true } },
+      images: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }], take: 1 },
+    },
+  });
+
+  const items = rows.map((property) => ({
+    id: property.id,
+    title: property.title,
+    unit: property.unit ?? "",
+    cluster: property.project?.name ?? "—",
+    category: property.category?.name ?? "—",
+    agent: property.owner?.fullName ?? "—",
+    // BigInt tidak bisa diangkut sebagai props Server → Client Component.
+    price: Number(property.price),
+    businessStatus: property.businessStatus,
+    verificationStatus: property.verificationStatus,
+    imageUrl: property.images[0] ? publicImageUrl(property.images[0].storagePath) : null,
+  }));
+
+  // Urutan cluster → kavling. `localeCompare` bernilai numerik agar "A-2"
+  // tetap berada sebelum "A-10".
+  return items.sort(
+    (a, b) =>
+      a.cluster.localeCompare(b.cluster, "id") ||
+      a.unit.localeCompare(b.unit, "id", { numeric: true }) ||
+      a.title.localeCompare(b.title, "id"),
+  );
 }
 
 // --- Email dari auth.users (tidak ada di schema public) -----------------

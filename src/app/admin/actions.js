@@ -84,6 +84,8 @@ export async function saveCategoryAction(input) {
       }
       await createCategory(parsed.data);
     }
+    revalidatePath("/dashboard/admin/kategori");
+    revalidatePath("/dashboard/admin");
     revalidatePath("/admin/kategori");
     revalidatePath("/admin");
     return { ok: true };
@@ -141,6 +143,8 @@ export async function updateUserAction(userId, patch) {
 
   try {
     await updateUser(admin.id, userId, parsed.data);
+    revalidatePath("/dashboard/admin/pengguna");
+    revalidatePath("/dashboard/admin");
     revalidatePath("/admin/pengguna");
     revalidatePath("/admin");
     return { ok: true };
@@ -166,6 +170,8 @@ export async function createStaffAction(input) {
 
   try {
     const created = await createStaffUser(parsed.data);
+    revalidatePath("/dashboard/admin/pengguna");
+    revalidatePath("/dashboard/admin");
     revalidatePath("/admin/pengguna");
     return { ok: true, created };
   } catch (error) {

@@ -35,7 +35,7 @@ export const ROLE_NAV = {
     { label: "Verification", href: "/dashboard/admin/verifikasi", ready: false },
     { label: "Users", href: "/dashboard/admin/pengguna", ready: false },
     { label: "Categories", href: "/dashboard/admin/kategori", ready: false },
-    { label: "Recap", href: "/dashboard/admin/rekap", ready: false },
+    { label: "Recap", href: "/dashboard/admin/rekap", ready: true },
     { label: "Settings", href: "/dashboard/admin/pengaturan", ready: false },
   ],
 };

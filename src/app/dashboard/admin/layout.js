@@ -1,4 +1,5 @@
 import AdminShell from "@/components/admin/AdminShell";
+import { ToastProvider } from "@/components/dashboard/Toast";
 import { adminLogoutAction } from "@/app/(auth)/logout/actions";
 import { requireRole } from "@/lib/auth/session";
 
@@ -13,8 +14,10 @@ export default async function AdminLayout({ children }) {
   const profile = await requireRole("admin", "/dashboard/admin");
 
   return (
-    <AdminShell profile={profile} logoutAction={adminLogoutAction}>
-      {children}
-    </AdminShell>
+    <ToastProvider>
+      <AdminShell profile={profile} logoutAction={adminLogoutAction}>
+        {children}
+      </AdminShell>
+    </ToastProvider>
   );
 }

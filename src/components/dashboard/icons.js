@@ -468,3 +468,35 @@ export function IconHeart(props) {
   );
 }
 
+/** Tombol "Cetak" pada laporan. */
+export function IconPrinter(props) {
+  return (
+    <Svg {...props}>
+      <path d="M7 8V3.5h10V8" />
+      <rect x="3.5" y="8" width="17" height="8" rx="2" />
+      <path d="M7 13h10v7.5H7z" />
+    </Svg>
+  );
+}
+
+/** Catatan kaki ringkasan kategori (pie chart). */
+export function IconPieChart(props) {
+  return (
+    <Svg {...props}>
+      <path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5H12z" />
+      <path d="M15 3.9A8.5 8.5 0 0 1 20.6 9H15z" />
+    </Svg>
+  );
+}
+
+/** Menu "Rekap Properti" pada sidebar admin. */
+export function IconTableChart(props) {
+  return (
+    <Svg {...props}>
+      <rect x="3.5" y="4" width="17" height="16" rx="2" />
+      <path d="M3.5 9.5h17M9.5 9.5V20" />
+    </Svg>
+  );
+}
+
+

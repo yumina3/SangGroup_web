@@ -15,6 +15,11 @@ export default defineConfig({
   },
 
   datasource: {
-    url: process.env.DATABASE_URL,
+    // Migrasi & status harus lewat session-mode pooler (port 5432).
+    // DATABASE_URL memakai transaction-mode pooler (port 6543 + pgbouncer=true)
+    // yang tidak mendukung prepared statement / advisory lock panjang sehingga
+    // Prisma CLI menggantung tanpa output. DIRECT_URL dipakai bila tersedia,
+    // dengan DATABASE_URL sebagai fallback.
+    url: process.env.DIRECT_URL || process.env.DATABASE_URL,
   },
 });

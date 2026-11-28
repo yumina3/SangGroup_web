@@ -9,7 +9,7 @@ import { formDataToObject, loginSchema, toFieldErrors } from "@/lib/validators/a
 
 const HOME_BY_ROLE = {
   agent: "/dashboard/penjual",
-  admin: "/admin",
+  admin: "/dashboard/admin",
   buyer: "/akun",
 };
 

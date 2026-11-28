@@ -54,6 +54,40 @@ export async function listUsers({ role = "", q = "", page = 1, pageSize = 20 } =
 }
 
 /**
+ * Rekap akun untuk kartu ringkasan halaman Pengguna.
+ * Satu query groupBy cukup untuk total, status aktif, dan sebaran role.
+ */
+export async function getUserRecap() {
+  const db = getDb();
+  const rows = await db.profile.groupBy({
+    by: ["role", "isActive"],
+    _count: { _all: true },
+  });
+
+  const recap = {
+    total: 0,
+    active: 0,
+    inactive: 0,
+    byRole: { admin: 0, agent: 0, buyer: 0 },
+    activeByRole: { admin: 0, agent: 0, buyer: 0 },
+  };
+
+  for (const row of rows) {
+    const count = row._count._all;
+    recap.total += count;
+    if (row.isActive) recap.active += count;
+    else recap.inactive += count;
+
+    if (row.role in recap.byRole) {
+      recap.byRole[row.role] += count;
+      if (row.isActive) recap.activeByRole[row.role] += count;
+    }
+  }
+
+  return recap;
+}
+
+/**
  * Ubah role/status pengguna.
  * Admin tidak boleh menurunkan dirinya sendiri atau menonaktifkan admin terakhir.
  */

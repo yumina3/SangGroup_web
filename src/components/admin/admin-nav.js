@@ -1,11 +1,11 @@
 import {
   IconAlert,
   IconBadge,
-  IconChart,
   IconHome,
   IconList,
   IconMap,
   IconSettings,
+  IconTableChart,
   IconUsers,
 } from "@/components/dashboard/icons";
 
@@ -44,13 +44,13 @@ export const ADMIN_NAV_GROUPS = [
       },
       {
         label: "Pengguna",
-        href: "/admin/pengguna",
+        href: "/dashboard/admin/pengguna",
         status: ADMIN_NAV_STATUS.ready,
         icon: IconUsers,
       },
       {
         label: "Kategori",
-        href: "/admin/kategori",
+        href: "/dashboard/admin/kategori",
         status: ADMIN_NAV_STATUS.ready,
         icon: IconList,
       },
@@ -69,9 +69,9 @@ export const ADMIN_NAV_GROUPS = [
     items: [
       {
         label: "Rekap Properti",
-        href: "/admin",
+        href: "/dashboard/admin/rekap",
         status: ADMIN_NAV_STATUS.ready,
-        icon: IconChart,
+        icon: IconTableChart,
       },
       {
         label: "Masterplan GIS",

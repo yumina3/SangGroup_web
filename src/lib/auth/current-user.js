@@ -85,7 +85,7 @@ export const getCurrentUser = cache(async () => {
 export const HOME_BY_ROLE = {
   buyer: "/akun",
   agent: "/dashboard/penjual",
-  admin: "/admin",
+  admin: "/dashboard/admin",
 };
 
 /**

@@ -1,5 +1,3 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
 /node_modules
 /.pnp
@@ -13,66 +11,43 @@
 # testing
 /coverage
 
-# next.js
+# next.js & build
 /.next/
 /out/
-
-# production
 /build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
-.env*
-!.env.example
-
-# vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
 
+# prisma generated client
 /src/generated/prisma
 
-# documentation/docs tetap masuk repo
+# env files
+.env*
+!.env.example
 
-# log hasil build dan script sementara (jangan masuk repo)
-build*.log
+# logs & temporary scripts
+*.log
 *.tmp.mjs
+tmp-inspect.mjs
 fix-encoding.py
-dev.log
-dev-penjual3.log
 moji.txt
+PROMPT-VERIFIKASI.md
+AGENTS.md
 
-# data lokal / editor
+# data lokal, OS & editor
+.DS_Store
 .idea/
 .vscode/
-*.local
+/uploads
 
 # kunci & sertifikat
+*.pem
 *.key
 *.crt
 *.p12
 
-# unggahan pengguna bila ada di lokal
-/uploads
-
-PROMPT-VERIFIKASI.md
-AGENTS.md deals
-
-# Temporary / local scripts
-fix-encoding.py
-tmp-inspect.mjs
-
-# Folder dan file lokal yang diabaikan
-docs/
-*.log
+# folder dokumentasi lokal (tidak di-push)
+/docs/
